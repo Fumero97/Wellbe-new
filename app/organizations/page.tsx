@@ -7,13 +7,13 @@ import { Search, Building2, ArrowRight, AlertTriangle, LayoutGrid, List } from "
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { FrontEndUserDTO, getMe, getOrganizations } from "@/lib/variables";
+import { FrontEndUserDTO, getMe, getOrganizations, OrganizationDTO } from "@/lib/variables";
 
 export default function Page() {
     const [user, setUser] = useState<FrontEndUserDTO | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [organizations, setOrganizations] = useState<Array<unknown>>([]);
+    const [organizations, setOrganizations] = useState<OrganizationDTO[]>([]);
     const [search, setSearch] = useState("");
 
     useEffect(() => {

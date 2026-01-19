@@ -17,6 +17,13 @@ export interface SedeDTO {
     denominazione: string;
 }
 
+export interface OrganizationDTO {
+    id: number;
+    denominazione: string;
+    tipo?: string;
+    sedeLegale?: string;
+}
+
 export interface QuestionarioDTO {
     id: number;
     categoria?: string | null;
@@ -89,9 +96,9 @@ export async function getMe(): Promise<FrontEndUserDTO | null> {
     }
 }
 
-export async function getOrganizations(): Promise<Array<unknown> | []> {
+export async function getOrganizations(): Promise<OrganizationDTO[]> {
     try {
-        const { data } = await axios.get<Array<unknown>>(
+        const { data } = await axios.get<OrganizationDTO[]>(
             `${API_BASE_URL}/api/organizations/to_manage`,
             {
                 withCredentials: true,
