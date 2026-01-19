@@ -3,8 +3,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import axios from "axios";
-import { Search, Building2, ArrowRight, AlertTriangle, LayoutGrid, List } from "lucide-react";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Search, Building2, ArrowRight, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FrontEndUserDTO, getMe, getOrganizations, OrganizationDTO } from "@/lib/variables";
