@@ -15,6 +15,8 @@ WellBe is a production-grade SaaS handling sensitive corporate wellbeing data.
 - The AI NEVER commits code directly.
 - The human developer applies patches and commits changes.
 
+**Efficiency note:** prefer small, reviewable patches that can be applied with copy/paste or `git apply`.
+
 ---
 
 ## 2. TECH STACK (NON-NEGOTIABLE)
@@ -38,6 +40,14 @@ No alternative frameworks or UI libraries are allowed.
   - data access logic
 - Domain logic must live in `lib/`, `services/`, or equivalent existing folders.
 - Do NOT change routing, auth flows, or redirects unless explicitly requested.
+
+**Fast path allowed (no extra approvals):**
+- UI/layout tweaks
+- copy changes
+- small component extraction
+- typing improvements
+- accessibility fixes
+as long as privacy/security rules are respected.
 
 ---
 
@@ -87,33 +97,18 @@ If a change requires touching these files, STOP.
 
 ---
 
-## 8. CONTEXT7 (MANDATORY)
-
-For any external library or framework:
-- Next.js
-- React
-- Tailwind
-- shadcn/ui
-- Axios
-
-The AI MUST:
-1. resolve-library-id via Context7
-2. get-library-docs via Context7
-
-Do NOT rely on memory for APIs or configuration.
-
----
-
-## 9. CHANGE LIMITS
+## 8. CHANGE LIMITS (ITERATION SIZE)
 
 Per iteration:
-- Max 3 files changed
-- Max 150 lines total
+- Max **5 files changed**
+- Max **250 lines total** (added/modified)
 - No large refactors unless explicitly requested
+
+**Rule of thumb:** prefer 1–3 files when possible, but avoid artificial fragmentation that increases iteration count.
 
 ---
 
-## 10. REQUIRED OUTPUT FORMAT
+## 9. REQUIRED OUTPUT FORMAT
 
 Every response MUST follow:
 
@@ -123,7 +118,7 @@ Every response MUST follow:
 
 ---
 
-## 11. DO NOT GUESS
+## 10. DO NOT GUESS
 
 - Do not assume files or patterns not shown.
 - Ask for missing context.
@@ -134,4 +129,5 @@ Every response MUST follow:
 ## SUMMARY
 
 Stability, privacy, and consistency
-are more important than speed.
+are more important than speed — but avoid unnecessary friction.
+Prefer safe defaults and small patches.
