@@ -53,6 +53,20 @@ import {
 } from "@/components/ui/command"
 import { Checkbox } from "@/components/ui/checkbox"
 import { cn } from "@/lib/utils"
+import { generatePDFReport } from "@/lib/pdf-service"
+import { toast } from "sonner"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { Switch } from "@/components/ui/switch"
+import { Label as UILabel } from "@/components/ui/label"
+import { Eye } from "lucide-react"
 
 export default function AnalyticsPage() {
   const surveys = [
@@ -90,6 +104,54 @@ export default function AnalyticsPage() {
   ])
   const [selectedDimension, setSelectedDimension] = useState<keyof typeof demographicAnalysis>("role")
   const [attentionArea, setAttentionArea] = useState<string>("Colleghi")
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false)
+  const [isPreviewing, setIsPreviewing] = useState(false)
+  const [isReportDialogOpen, setIsReportDialogOpen] = useState(false)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  
+  const [reportConfig, setReportConfig] = useState({
+    kpis: true,
+    radar: true,
+    insights: true,
+    demographics: true,
+    history: true,
+    orientation: 'portrait' as 'portrait' | 'landscape'
+  })
+
+  const handleToggleSection = (section: keyof typeof reportConfig) => {
+    setReportConfig(prev => ({ ...prev, [section]: !prev[section] }))
+  }
+
+  const handlePreviewPDF = async () => {
+    setIsPreviewing(true)
+    try {
+      const url = await generatePDFReport("wellbeing-report-content", "Preview", { 
+        preview: true,
+        orientation: reportConfig.orientation
+      }) as string
+      setPreviewUrl(url)
+    } catch (error) {
+      toast.error("Errore durante la generazione della preview")
+    } finally {
+      setIsPreviewing(false)
+    }
+  }
+
+  const handleDownloadPDF = async () => {
+    setIsGeneratingPDF(true)
+    const toastId = toast.loading("Generazione PDF in corso...")
+    try {
+      await generatePDFReport("wellbeing-report-content", `Wellbeing_Report_${selectedSurvey.title.replace(/\s+/g, '_')}`, {
+        orientation: reportConfig.orientation
+      })
+      toast.success("PDF scaricato con successo", { id: toastId })
+      setIsReportDialogOpen(false)
+    } catch (error) {
+      toast.error("Errore durante la generazione del PDF", { id: toastId })
+    } finally {
+      setIsGeneratingPDF(false)
+    }
+  }
 
   // Mock Data for Charts
   const wellbeingRadarData = [
@@ -349,6 +411,15 @@ export default function AnalyticsPage() {
             <Button variant="ghost" size="icon">
                 <RefreshCcw className="h-4 w-4" />
             </Button>
+            <Button 
+                size="sm" 
+                variant="outline"
+                className="gap-2 border-slate-200 text-slate-700 hover:bg-slate-50"
+                onClick={() => setIsReportDialogOpen(true)}
+            >
+                <Files className="h-4 w-4" />
+                Report PDF
+            </Button>
             <Button size="sm" className="gap-2 bg-slate-900 text-white hover:bg-slate-800">
                 <Download className="h-4 w-4" />
                 Export
@@ -356,6 +427,7 @@ export default function AnalyticsPage() {
          </div>
       </div>
 
+      <div id="wellbeing-report-content" className="space-y-6">
       {/* Survey Selector */}
       <Card className="border-slate-200 shadow-sm overflow-hidden bg-white mb-6">
         <CardContent className="p-4 flex items-center justify-between">
@@ -379,7 +451,7 @@ export default function AnalyticsPage() {
             </div>
             
             <Select value={selectedSurveyId} onValueChange={setSelectedSurveyId}>
-                <SelectTrigger className="w-10 h-10 p-0 rounded-full border-slate-200 bg-white hover:bg-slate-50 transition-colors flex items-center justify-center shrink-0">
+                <SelectTrigger className="w-10 h-10 p-0 rounded-full border-slate-200 bg-white hover:bg-slate-50 transition-colors flex items-center justify-center shrink-0 no-pdf">
                     <div className="sr-only">
                         <SelectValue placeholder="Select Survey" />
                     </div>
@@ -397,7 +469,7 @@ export default function AnalyticsPage() {
 
       {/* Main Analysis Section */}
        {/* Detailed Metrics Grid */}
-       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+       <div id="wellbeing-section-kpi" className={cn("grid gap-4 md:grid-cols-2 lg:grid-cols-5 grid-pdf-3", !reportConfig.kpis && "hidden no-pdf")}>
           {kpiData.map((kpi) => (
               <Card key={kpi.title} className={`border-slate-200 shadow-sm ${kpi.isSpecial ? 'bg-blue-600 ring-2 ring-blue-600 ring-offset-2' : ''}`}>
                   <CardContent className="p-4 flex flex-col justify-between h-full space-y-2">
@@ -424,7 +496,7 @@ export default function AnalyticsPage() {
               </Card>
           ))}
        </div>
-      <div className="grid gap-6 lg:grid-cols-2">
+       <div id="wellbeing-section-radar" className={cn("grid gap-6 lg:grid-cols-1 grid-pdf", !reportConfig.radar && "hidden no-pdf")}>
          {/* Radar Wellbeing Areas */}
          <Card className="border-slate-200 shadow-sm flex flex-col">
             <CardHeader>
@@ -437,7 +509,7 @@ export default function AnalyticsPage() {
          </Card>
 
          {/* Overview Section */}
-         <Card className="border-slate-200 shadow-sm overflow-hidden flex flex-col">
+         <Card className="border-slate-200 shadow-sm overflow-hidden flex flex-col no-break">
             <CardHeader>
                 <CardTitle>Overview</CardTitle>
             </CardHeader>
@@ -455,7 +527,7 @@ export default function AnalyticsPage() {
       </div>
 
 {/* Bottom Section: Insights & Hotspots */}
-       <div className="grid gap-6 md:grid-cols-2 mt-6">
+       <div id="wellbeing-section-insights" className={cn("grid gap-6 md:grid-cols-2 mt-6 grid-pdf", !reportConfig.insights && "hidden no-pdf")}>
             <Card className="border-slate-200 shadow-sm">
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
@@ -527,7 +599,7 @@ export default function AnalyticsPage() {
             </Card>
        </div>
        
-      <div className="grid gap-6 lg:grid-cols-3 mt-6">
+       <div id="wellbeing-section-demographics" className={cn("grid gap-6 lg:grid-cols-3 mt-6 grid-pdf", !reportConfig.demographics && "hidden no-pdf")}>
          {/* Demographic Distribution Card */}
          <Card className="lg:col-span-1 border-slate-200 shadow-sm">
             <CardHeader className="flex flex-row items-center justify-between space-y-0">
@@ -589,7 +661,7 @@ export default function AnalyticsPage() {
                  <div className="flex flex-row items-center justify-between w-full">
                     <CardTitle>Wellbeing Trends</CardTitle>
                     <CardDescription>Impatto {demographicAnalysis[selectedDimension].label} sulle aree del Wellbeing</CardDescription>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 no-pdf">
                         <Popover>
                             <PopoverTrigger asChild>
                                 <Button variant="outline" size="sm" className="h-8 gap-2">
@@ -701,8 +773,8 @@ export default function AnalyticsPage() {
 
        
 
-        {/* Storico Compilazioni */}
-        <Card className="border-slate-200 shadow-sm mt-6">
+        <div id="wellbeing-section-history" className={cn(!reportConfig.history && "hidden no-pdf")}>
+            <Card className="border-slate-200 shadow-sm mt-6">
             <CardHeader>
                 <CardTitle className="text-xl font-bold text-slate-800">Storico compilazioni</CardTitle>
             </CardHeader>
@@ -735,9 +807,10 @@ export default function AnalyticsPage() {
                 </div>
             </CardContent>
         </Card>
+        </div>
 
         {/* Help Section */}
-        <div className="mt-8 p-8 rounded-xl border border-blue-200 bg-blue-50/50 flex flex-col md:flex-row items-center justify-between gap-6">
+        <div className="mt-8 p-8 rounded-xl border border-blue-200 bg-blue-50/50 flex flex-col md:flex-row items-center justify-between gap-6 no-pdf">
             <div className="space-y-1">
                 <h3 className="text-2xl font-bold text-blue-900">Hai bisogno di aiuto?</h3>
                 <p className="text-slate-600">In chat, via mail o al telefono: siamo qui per te.</p>
@@ -757,6 +830,74 @@ export default function AnalyticsPage() {
                 </Button>
             </div>
         </div>
+      </div>
+
+      {/* Report Customizer Dialog */}
+      <Dialog open={isReportDialogOpen} onOpenChange={setIsReportDialogOpen}>
+        <DialogContent className="max-w-5xl h-[90vh] flex flex-col p-0 overflow-hidden bg-slate-50">
+           <DialogHeader className="p-6 bg-white border-b shrink-0">
+             <div className="flex items-center justify-between">
+               <div>
+                  <DialogTitle className="text-xl font-bold text-slate-900">Personalizza Report PDF</DialogTitle>
+                  <DialogDescription>Seleziona i blocchi da includere e verifica l'anteprima</DialogDescription>
+               </div>
+               <div className="flex items-center gap-3">
+                  <Button variant="outline" size="sm" onClick={handlePreviewPDF} disabled={isPreviewing}>
+                    {isPreviewing ? <RefreshCcw className="h-4 w-4 animate-spin mr-2" /> : <Eye className="h-4 w-4 mr-2" />}
+                    Rigenera Anteprima
+                  </Button>
+                  <Button size="sm" onClick={handleDownloadPDF} disabled={isGeneratingPDF} className="bg-blue-600 hover:bg-blue-700">
+                    {isGeneratingPDF ? <RefreshCcw className="h-4 w-4 animate-spin mr-2" /> : <Download className="h-4 w-4 mr-2" />}
+                    Scarica PDF
+                  </Button>
+               </div>
+             </div>
+           </DialogHeader>
+           
+           <div className="flex-1 flex overflow-hidden">
+              {/* Sidebar Configurator */}
+              <div className="w-80 border-r bg-white p-6 space-y-8 overflow-y-auto shrink-0">
+                <div className="space-y-4">
+                  <h4 className="text-sm font-semibold text-slate-900 uppercase tracking-wider">Sezioni Report</h4>
+                  <div className="space-y-4">
+                    {Object.entries({
+                      kpis: "KPI Principali",
+                      radar: "Wellbeing Radar",
+                      insights: "AI Insights",
+                      demographics: "Analisi Demografica",
+                      history: "Storico Compilazioni"
+                    }).map(([key, label]) => (
+                      <div key={key} className="flex items-center justify-between">
+                        <UILabel htmlFor={`section-${key}`} className="text-sm font-medium text-slate-700">{label}</UILabel>
+                        <Switch 
+                          id={`section-${key}`} 
+                          checked={reportConfig[key as keyof (typeof reportConfig)] as boolean} 
+                          onCheckedChange={() => handleToggleSection(key as keyof typeof reportConfig)}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Preview Area */}
+              <div className="flex-1 p-8 overflow-y-auto flex flex-col items-center">
+                 {previewUrl ? (
+                   <div className="w-full h-full bg-white shadow-2xl rounded-lg overflow-hidden border border-slate-200">
+                      <iframe src={previewUrl} className="w-full h-full border-none" />
+                   </div>
+                 ) : (
+                   <div className="flex flex-col items-center justify-center h-full text-slate-400 space-y-4">
+                      <div className="p-6 bg-slate-100 rounded-full">
+                        <Files className="h-12 w-12" />
+                      </div>
+                      <p className="text-sm font-medium">Clicca su "Rigenera Anteprima" per visualizzare il report reale</p>
+                   </div>
+                 )}
+              </div>
+           </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
