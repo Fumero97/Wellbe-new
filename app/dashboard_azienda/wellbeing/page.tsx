@@ -34,7 +34,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
 import { addDays, format } from "date-fns"
 import { DateRange } from "react-day-picker"
@@ -69,6 +69,17 @@ import { Switch } from "@/components/ui/switch"
 import { Label as UILabel } from "@/components/ui/label"
 import { Eye } from "lucide-react"
 
+function SurveyParamReader({ surveys, onSelect }: { surveys: { id: string }[], onSelect: (id: string) => void }) {
+  const searchParams = useSearchParams()
+  useEffect(() => {
+    const param = searchParams.get("survey")
+    if (param && surveys.some(s => s.id === param)) {
+      onSelect(param)
+    }
+  }, [searchParams, surveys, onSelect])
+  return null
+}
+
 export default function AnalyticsPage() {
   const surveys = [
     {
@@ -91,17 +102,8 @@ export default function AnalyticsPage() {
       }
   ]
 
-  const searchParams = useSearchParams()
-  const surveyParam = searchParams.get("survey")
-
   const [selectedSurveyId, setSelectedSurveyId] = useState(surveys[0].id)
   const selectedSurvey = surveys.find(s => s.id === selectedSurveyId) || surveys[0]
-
-  useEffect(() => {
-    if (surveyParam && surveys.some(s => s.id === surveyParam)) {
-      setSelectedSurveyId(surveyParam)
-    }
-  }, [surveyParam])
 
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: new Date(2024, 0, 1),
@@ -403,6 +405,9 @@ export default function AnalyticsPage() {
 
   return (
     <div className="space-y-6">
+      <Suspense fallback={null}>
+        <SurveyParamReader surveys={surveys} onSelect={setSelectedSurveyId} />
+      </Suspense>
       {/* Header & Controls */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
          <div className="space-y-1">
