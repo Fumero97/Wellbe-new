@@ -9,8 +9,8 @@ export async function GET() {
     nome: "Mario",
     cognome: "Rossi",
     email: "mario.rossi@example.com",
-    consulente: false,
-    ruolo: "admin_azienda", // Simulating a corporate admin
+    consulente: true,
+    ruolo: "partner", // Simulating a consultant/partner
   };
 
   return NextResponse.json(mockUser);

@@ -2,6 +2,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import axios from "axios";
 import { Search, Building2, ArrowRight, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -9,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { FrontEndUserDTO, getMe, getOrganizations, OrganizationDTO } from "@/lib/variables";
 
 export default function Page() {
+    const router = useRouter();
     const [user, setUser] = useState<FrontEndUserDTO | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -24,6 +26,12 @@ export default function Page() {
                 const me = await getMe();
                 setUser(me);
 
+                // Redirect partner users to consultant area
+                if (me && me.ruolo === "partner") {
+                    router.push("/consulente/aziende");
+                    return;
+                }
+
                 const organizationList = await getOrganizations();
                 setOrganizations(organizationList);
             } catch (err: unknown) {
@@ -36,7 +44,7 @@ export default function Page() {
                 setLoading(false);
             }
         })();
-    }, []);
+    }, [router]);
 
     const handleOpen = (id: number) => {
         if (!user) return;

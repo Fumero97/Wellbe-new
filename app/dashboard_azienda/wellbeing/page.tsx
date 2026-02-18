@@ -34,7 +34,8 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useSearchParams } from "next/navigation"
 import { addDays, format } from "date-fns"
 import { DateRange } from "react-day-picker"
 import { Calendar } from "@/components/ui/calendar"
@@ -90,8 +91,17 @@ export default function AnalyticsPage() {
       }
   ]
 
+  const searchParams = useSearchParams()
+  const surveyParam = searchParams.get("survey")
+
   const [selectedSurveyId, setSelectedSurveyId] = useState(surveys[0].id)
   const selectedSurvey = surveys.find(s => s.id === selectedSurveyId) || surveys[0]
+
+  useEffect(() => {
+    if (surveyParam && surveys.some(s => s.id === surveyParam)) {
+      setSelectedSurveyId(surveyParam)
+    }
+  }, [surveyParam])
 
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: new Date(2024, 0, 1),
@@ -468,7 +478,6 @@ export default function AnalyticsPage() {
       </Card>
 
       {/* Main Analysis Section */}
-       {/* Detailed Metrics Grid */}
        <div id="wellbeing-section-kpi" className={cn("grid gap-4 md:grid-cols-2 lg:grid-cols-5 grid-pdf-3", !reportConfig.kpis && "hidden no-pdf")}>
           {kpiData.map((kpi) => (
               <Card key={kpi.title} className={`border-slate-200 shadow-sm ${kpi.isSpecial ? 'bg-blue-600 ring-2 ring-blue-600 ring-offset-2' : ''}`}>
@@ -496,15 +505,36 @@ export default function AnalyticsPage() {
               </Card>
           ))}
        </div>
-       <div id="wellbeing-section-radar" className={cn("grid gap-6 lg:grid-cols-1 grid-pdf", !reportConfig.radar && "hidden no-pdf")}>
+
+      <div id="wellbeing-section-radar" className={cn("grid gap-6 lg:grid-cols-1 grid-pdf", !reportConfig.radar && "hidden no-pdf")}>
          {/* Radar Wellbeing Areas */}
-         <Card className="border-slate-200 shadow-sm flex flex-col">
-            <CardHeader>
-                <CardTitle>Wellbeing Radar</CardTitle>
-                <CardDescription>Punteggi da 1 a 6 per area.</CardDescription>
+         <Card className="border-slate-200 shadow-sm flex flex-col relative">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0">
+                <div className="space-y-1">
+                    <CardTitle>Wellbeing Radar</CardTitle>
+                    <CardDescription>Punteggi da 1 a 6 per area.</CardDescription>
+                </div>
+                {/* Radar Legend (Inline small) */}
+                <div className="flex flex-wrap gap-x-3 gap-y-1 max-w-[200px] justify-end text-[9px] font-bold text-slate-500">
+                    {Object.entries(metricsConfig).map(([key, config]) => {
+                        const abbr = key === "Coinvolgimento" ? "RCIC" : key === "Sicurezza" ? "CNL" : key === "Soddisfazione" ? "SDA" : key === "Leadership" ? "L" : key === "Appartenenza" ? "LEVP" : key === "Work-life" ? "S" : key === "Tecnologia" ? "T" : "SP";
+                        return (
+                            <div key={key} className="flex items-center gap-1">
+                                <span className="text-slate-900">{abbr}:</span>
+                                <span className="font-medium text-slate-400">{key}</span>
+                            </div>
+                        )
+                    })}
+                </div>
             </CardHeader>
             <CardContent className="flex-1 flex items-center justify-center min-h-[400px] w-full">
-                <ChartRadarLinesOnly data={wellbeingRadarData} config={radarConfig} />
+                <ChartRadarLinesOnly 
+                    data={wellbeingRadarData.map(item => ({
+                        ...item,
+                        area: item.area === "Coinvolgimento" ? "RCIC" : item.area === "Sicurezza" ? "CNL" : item.area === "Soddisfazione" ? "SDA" : item.area === "Leadership" ? "L" : item.area === "Appartenenza" ? "LEVP" : item.area === "Work-life" ? "S" : item.area === "Tecnologia" ? "T" : "SP"
+                    }))} 
+                    config={radarConfig} 
+                />
             </CardContent>
          </Card>
 
@@ -526,8 +556,8 @@ export default function AnalyticsPage() {
          </Card>
       </div>
 
-{/* Bottom Section: Insights & Hotspots */}
-       <div id="wellbeing-section-insights" className={cn("grid gap-6 md:grid-cols-2 mt-6 grid-pdf", !reportConfig.insights && "hidden no-pdf")}>
+       {/* Interactive Insights (Screen Only) */}
+       <div id="wellbeing-section-insights" className={cn("grid gap-6 md:grid-cols-2 mt-6 grid-pdf no-pdf-block", !reportConfig.insights && "hidden no-pdf")}>
             <Card className="border-slate-200 shadow-sm">
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
@@ -598,8 +628,50 @@ export default function AnalyticsPage() {
                 </CardContent>
             </Card>
        </div>
-       
-       <div id="wellbeing-section-demographics" className={cn("grid gap-6 lg:grid-cols-3 mt-6 grid-pdf", !reportConfig.demographics && "hidden no-pdf")}>
+
+        {/* PDF-Only Expanded Attention Areas */}
+        <div className={cn("hidden pdf-visible space-y-8 mt-8", !reportConfig.insights && "no-pdf")}>
+            <div className="page-break" />
+            <h2 className="text-2xl font-bold text-slate-900 border-b pb-2 mb-6">Analisi Dettagliata per Area di Attenzione</h2>
+            <div className="grid grid-cols-2 gap-6">
+                {Object.keys(metricsConfig).map((area) => (
+                    <Card key={area} className="border-slate-200 shadow-sm pdf-no-split">
+                        <CardHeader className="pb-2">
+                            <CardTitle className="text-sm font-bold flex items-center gap-2">
+                                <AlertTriangle className="h-4 w-4 text-amber-500" />
+                                {metricsConfig[area as keyof typeof metricsConfig].label}
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-2">
+                            {(() => {
+                                const allPerformance = Object.entries(demographicAnalysis).flatMap(([dimKey, dimData]) => 
+                                    dimData.performance.map(p => ({
+                                        ...p,
+                                        dimLabel: dimData.label
+                                    }))
+                                );
+
+                                return allPerformance
+                                    .sort((a: any, b: any) => (a[area] as number) - (b[area] as number))
+                                    .slice(0, 3)
+                                    .map((item: any, idx) => (
+                                        <div key={idx} className="flex justify-between items-center p-2 rounded-md bg-red-50 border border-red-100">
+                                            <div className="space-y-0.5">
+                                                <p className="text-[9px] font-bold text-red-500 uppercase tracking-wider">{item.dimLabel}</p>
+                                                <p className="text-xs font-semibold text-red-700">{item.name}</p>
+                                            </div>
+                                            <span className="text-sm font-bold text-red-700">{(item[area] as number).toFixed(1)}/6</span>
+                                        </div>
+                                    ));
+                            })()}
+                        </CardContent>
+                    </Card>
+                ))}
+            </div>
+        </div>
+
+       {/* Interactive Demographics (Screen Only) */}
+       <div id="wellbeing-section-demographics" className={cn("grid gap-6 lg:grid-cols-3 mt-6 grid-pdf no-pdf-block", !reportConfig.demographics && "hidden no-pdf")}>
          {/* Demographic Distribution Card */}
          <Card className="lg:col-span-1 border-slate-200 shadow-sm">
             <CardHeader className="flex flex-row items-center justify-between space-y-0">
@@ -693,7 +765,7 @@ export default function AnalyticsPage() {
                                                             ? "bg-primary text-primary-foreground"
                                                             : "opacity-50 [&_svg]:invisible"
                                                     )}>
-                                                        <Check className={cn("h-4 w-4")} />
+                                                        <Check className="h-4 w-4" />
                                                     </div>
                                                     <span className="flex-1">{metricsConfig[metric as keyof typeof metricsConfig].label}</span>
                                                 </CommandItem>
@@ -771,9 +843,68 @@ export default function AnalyticsPage() {
           </Card>
       </div>
 
+        {/* PDF-Only Expanded Demographics */}
+        <div className={cn("hidden pdf-visible space-y-8 mt-8", !reportConfig.demographics && "no-pdf")}>
+            <div className="page-break" />
+            <h2 className="text-2xl font-bold text-slate-900 border-b pb-2 mb-6">Analisi Demografica Completa</h2>
+            {Object.entries(demographicAnalysis).map(([dimKey, dimData]) => (
+                <div key={dimKey} className="space-y-4 mb-8 pdf-no-split">
+                    <h3 className="text-lg font-bold text-slate-800">{dimData.label}</h3>
+                    <div className="grid grid-cols-3 gap-6">
+                        <Card className="col-span-1 border-slate-200 shadow-sm">
+                            <CardHeader className="py-3">
+                                <CardTitle className="text-sm">Distribuzione %</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="h-[150px] w-full">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <PieChart>
+                                            <Pie 
+                                                data={dimData.distribution} 
+                                                cx="50%" cy="50%" innerRadius={40} outerRadius={60} 
+                                                paddingAngle={5} dataKey="value"
+                                            >
+                                                {dimData.distribution.map((entry, index) => (
+                                                    <Cell key={`cell-${index}`} fill={entry.color} />
+                                                ))}
+                                            </Pie>
+                                            <Tooltip />
+                                        </PieChart>
+                                    </ResponsiveContainer>
+                                </div>
+                                <div className="mt-2 grid grid-cols-2 gap-1">
+                                    {dimData.distribution.map((item) => (
+                                        <div key={item.name} className="flex items-center justify-between text-[8px]">
+                                            <div className="flex items-center gap-1">
+                                                <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: item.color }} />
+                                                <span className="text-slate-600 truncate max-w-[60px]">{item.name}</span>
+                                            </div>
+                                            <span className="font-medium">{item.value}%</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </CardContent>
+                        </Card>
+                        <Card className="col-span-2 border-slate-200 shadow-sm">
+                            <CardHeader className="py-3">
+                                <CardTitle className="text-sm">Trend Wellbeing</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="h-[200px] w-full">
+                                    <ChartLineMultiple 
+                                        data={dimData.performance} 
+                                        config={metricsConfig} 
+                                        dataKeys={selectedMetrics} 
+                                    />
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
+                </div>
+            ))}
+        </div>
        
-
-        <div id="wellbeing-section-history" className={cn(!reportConfig.history && "hidden no-pdf")}>
+       <div id="wellbeing-section-history" className={cn(!reportConfig.history && "hidden no-pdf")}>
             <Card className="border-slate-200 shadow-sm mt-6">
             <CardHeader>
                 <CardTitle className="text-xl font-bold text-slate-800">Storico compilazioni</CardTitle>
@@ -876,6 +1007,16 @@ export default function AnalyticsPage() {
                         />
                       </div>
                     ))}
+                  </div>
+
+                  <div className="pt-6 border-t space-y-4">
+                    <h4 className="text-sm font-semibold text-slate-900 uppercase tracking-wider">Orientamento Pagina</h4>
+                    <Tabs value={reportConfig.orientation} onValueChange={(v) => setReportConfig(prev => ({ ...prev, orientation: v as any }))}>
+                      <TabsList className="grid w-full grid-cols-2">
+                        <TabsTrigger value="portrait">Verticale</TabsTrigger>
+                        <TabsTrigger value="landscape">Orizzontale</TabsTrigger>
+                      </TabsList>
+                    </Tabs>
                   </div>
                 </div>
               </div>

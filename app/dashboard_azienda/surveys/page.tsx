@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState, useMemo } from "react"
+import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -27,6 +28,7 @@ import {
 
 const INITIAL_SURVEYS = [
   {
+    id: "1",
     title: "Quarterly Wellness Assessment",
     status: "Active",
     module: "Wellbeing",
@@ -38,6 +40,7 @@ const INITIAL_SURVEYS = [
     color: "bg-emerald-100 text-emerald-700"
   },
   {
+    id: "2",
     title: "DEI & Inclusion Survey",
     status: "Draft",
     module: "DEI",
@@ -49,6 +52,7 @@ const INITIAL_SURVEYS = [
     color: "bg-yellow-100 text-yellow-700"
   },
   {
+    id: "3",
     title: "Safety Protocols Feedback",
     status: "Closed",
     module: "Safety",
@@ -60,6 +64,7 @@ const INITIAL_SURVEYS = [
     color: "bg-slate-100 text-slate-700"
   },
   {
+    id: "4",
     title: "Vendor Satisfaction Survey",
     status: "Active",
     module: "Supply Chain",
@@ -71,6 +76,7 @@ const INITIAL_SURVEYS = [
     color: "bg-emerald-100 text-emerald-700"
   },
   {
+    id: "5",
     title: "Internal Stakeholder Review",
     status: "Draft",
     module: "Stakeholders",
@@ -84,6 +90,7 @@ const INITIAL_SURVEYS = [
 ]
 
 export default function SurveysPage() {
+  const router = useRouter()
   const [search, setSearch] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
   const [moduleFilter, setModuleFilter] = useState("all")
@@ -273,7 +280,7 @@ export default function SurveysPage() {
                     </div>
                 </CardContent>
                 <CardFooter className="grid grid-cols-3 gap-2 border-t border-slate-100 p-3 bg-slate-50/50 rounded-b-xl">
-                    <Button variant="ghost" size="sm" className="w-full text-slate-600 hover:text-blue-600 hover:bg-white text-xs gap-1.5 font-medium">
+                    <Button variant="ghost" size="sm" className="w-full text-slate-600 hover:text-blue-600 hover:bg-white text-xs gap-1.5 font-medium" onClick={() => router.push(`/dashboard_azienda/wellbeing?survey=${survey.id}`)}>
                       <Eye className="h-3.5 w-3.5" />
                       Vedi
                     </Button>

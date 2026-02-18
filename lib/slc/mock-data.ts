@@ -1,0 +1,80 @@
+import { SlcAssessment } from "./types"
+import {
+  CHECKLIST_CONTENUTO,
+  CHECKLIST_CONTESTO,
+  CHECKLIST_REMOTO,
+  EVENTI_SENTINELLA_DEFS,
+} from "./checklist-items"
+
+export function createMockAssessment(assessmentId: string): SlcAssessment {
+  return {
+    id: assessmentId,
+    status: "draft",
+    versione: 1,
+    createdAt: "2026-01-15T10:00:00Z",
+    updatedAt: "2026-02-10T14:30:00Z",
+    setup: {
+      companyId: "acme-corp-001",
+      nomeGruppoOmogeneo: "Impiegati amministrativi",
+      numeroLavoratori: 45,
+      dataValutazione: "2026-02-01",
+      tipoValutazione: "iniziale",
+      remoteWorkEnabled: true,
+      numeroLavoratoriRemoto: 12,
+      managementTeam: [
+        { id: "tm1", nome: "Dr. Marco Bianchi", ruolo: "Datore di lavoro / Delegato" },
+        { id: "tm2", nome: "Ing. Laura Rossi", ruolo: "RSPP" },
+        { id: "tm3", nome: "Dr. Paolo Verdi", ruolo: "Medico Competente" },
+        { id: "tm4", nome: "Giuseppe Neri", ruolo: "RLS" },
+      ],
+      noteGenerali: "",
+    },
+    eventiSentinella: EVENTI_SENTINELLA_DEFS.map((def) => ({
+      id: def.id,
+      codice: def.codice,
+      nome: def.nome,
+      tipo: def.tipo,
+      valoreUltimoAnno: null,
+      valoreTriennio: null,
+      risultatoUltimoAnno: null,
+      risultatoTriennio: null,
+      trend: null,
+      punteggio: 0,
+      risposta: null,
+      note: "",
+    })),
+    checklistContenuto: CHECKLIST_CONTENUTO.map((def) => ({
+      id: def.id,
+      codice: def.codice,
+      risposta: null,
+      punteggio: 0,
+      note: "",
+    })),
+    checklistContesto: CHECKLIST_CONTESTO.map((def) => ({
+      id: def.id,
+      codice: def.codice,
+      risposta: null,
+      punteggio: 0,
+      note: "",
+    })),
+    moduloRemoto: CHECKLIST_REMOTO.map((def) => ({
+      id: def.id,
+      codice: def.codice,
+      risposta: null,
+      punteggio: 0,
+      note: "",
+    })),
+    scores: {
+      totaleEventiSentinella: 0,
+      rischioEventiSentinella: "basso",
+      totaleContenuto: 0,
+      totaleContesto: 0,
+      totaleFase1: 0,
+      rischioFase1: "basso",
+      totaleModuloRemoto: 0,
+    },
+    noteFinali: "",
+    azioniCorrettive: "",
+    auditLog: [],
+  }
+}

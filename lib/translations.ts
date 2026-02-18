@@ -17,7 +17,19 @@ export const translations = {
     partner: "Partner",
     settings: "Impostazioni",
     tools: "Strumenti",
-    
+
+    // Consultant
+    consultant: "Consulente",
+    deadlines: "Scadenziario",
+    companies: "Aziende",
+    sortBy: "Ordina per",
+    filterBy: "Filtra per",
+    clearFilters: "Cancella filtri",
+
+    // SLC
+    slc: "SLC",
+    slcFase1: "Fase 1 - Valutazione Preliminare",
+
     // Dashboard
     dashboardTitle: "Dashboard CSR",
     dashboardSubtitle: "Monitora e gestisci l'impatto sociale e la sostenibilità della tua azienda.",
@@ -63,7 +75,19 @@ export const translations = {
     partner: "Partners",
     settings: "Settings",
     tools: "Tools",
-    
+
+    // Consultant
+    consultant: "Consultant",
+    deadlines: "Deadlines",
+    companies: "Companies",
+    sortBy: "Sort by",
+    filterBy: "Filter by",
+    clearFilters: "Clear filters",
+
+    // SLC
+    slc: "WRS",
+    slcFase1: "Phase 1 - Preliminary Assessment",
+
     // Dashboard
     dashboardTitle: "CSR Dashboard",
     dashboardSubtitle: "Monitor and manage your company's social impact and sustainability.",

@@ -150,6 +150,11 @@ export async function generatePDFReport(
           }
 
           h1, h2, h3 { color: #0f172a; }
+
+          /* Visibility toggles */
+          .pdf-visible { display: block !important; visibility: visible !important; }
+          .no-pdf-block { display: none !important; visibility: hidden !important; }
+          .page-break { page-break-before: always; }
         </style>
       </head>
       <body>
