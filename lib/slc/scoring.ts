@@ -40,15 +40,21 @@ export function checklistItemScore(risposta: SlcYesNo): number {
   return risposta === "no" ? 1 : 0
 }
 
-/** Total sentinel events score */
+/**
+ * Total sentinel events score.
+ * Formula: (Σ punteggi_indicatori / n° indicatori) × 100
+ * Scale: 0–400 (max per indicator = 4, so max avg = 4, × 100 = 400)
+ */
 export function calcTotaleEventiSentinella(events: SlcSentinelEvent[]): number {
-  return events.reduce((sum, e) => sum + e.punteggio, 0)
+  if (events.length === 0) return 0
+  const sum = events.reduce((acc, e) => acc + e.punteggio, 0)
+  return Math.round((sum / events.length) * 100)
 }
 
-/** Sentinel risk level (INAIL thresholds, max possible = 40) */
+/** Sentinel risk level — thresholds scaled to 0–400 range (25 % / 50 %) */
 export function calcRischioEventiSentinella(totale: number): SlcRiskLevel {
-  if (totale <= 10) return "basso"
-  if (totale <= 20) return "medio"
+  if (totale <= 100) return "basso"
+  if (totale <= 200) return "medio"
   return "alto"
 }
 
@@ -71,10 +77,14 @@ export function calcTotaleFase1(
   return totaleEventi + totaleContenuto + totaleContesto
 }
 
-/** Phase 1 risk level */
+/**
+ * Phase 1 risk level.
+ * Max = 400 (sentinel) + 22 (contenuto) + 23 (contesto) = 445
+ * Thresholds at 25 % (≤ 111) and 50 % (≤ 222)
+ */
 export function calcRischioFase1(totaleFase1: number): SlcRiskLevel {
-  if (totaleFase1 <= 25) return "basso"
-  if (totaleFase1 <= 50) return "medio"
+  if (totaleFase1 <= 111) return "basso"
+  if (totaleFase1 <= 222) return "medio"
   return "alto"
 }
 

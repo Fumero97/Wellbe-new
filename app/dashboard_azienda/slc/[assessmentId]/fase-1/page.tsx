@@ -717,7 +717,7 @@ export default function SlcFase1Page() {
               <span className="font-semibold text-sm">Totale Eventi Sentinella</span>
               <div className="flex items-center gap-3">
                 <span className="text-lg font-bold">{scores.totaleEventiSentinella}</span>
-                <span className="text-sm text-slate-500">/ 40</span>
+                <span className="text-sm text-slate-500">/ 400</span>
                 <Badge className={RISK_CONFIG[scores.rischioEventiSentinella].bg}>
                   {RISK_CONFIG[scores.rischioEventiSentinella].label}
                 </Badge>
@@ -873,8 +873,8 @@ export default function SlcFase1Page() {
                   <CardTitle className="text-sm text-slate-600">Eventi Sentinella</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{scores.totaleEventiSentinella}<span className="text-sm font-normal text-slate-400"> / 40</span></div>
-                  <Progress value={(scores.totaleEventiSentinella / 40) * 100} className="mt-2 h-2" />
+                  <div className="text-2xl font-bold">{scores.totaleEventiSentinella}<span className="text-sm font-normal text-slate-400"> / 400</span></div>
+                  <Progress value={(scores.totaleEventiSentinella / 400) * 100} className="mt-2 h-2" />
                   <div className="mt-2">
                     <Badge className={RISK_CONFIG[scores.rischioEventiSentinella].bg}>
                       {RISK_CONFIG[scores.rischioEventiSentinella].label}
@@ -911,8 +911,8 @@ export default function SlcFase1Page() {
                   <CardTitle className="text-sm font-bold text-slate-900">TOTALE FASE 1</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-3xl font-black">{scores.totaleFase1}<span className="text-sm font-normal text-slate-400"> / {40 + CHECKLIST_CONTENUTO.length + CHECKLIST_CONTESTO.length}</span></div>
-                  <Progress value={(scores.totaleFase1 / (40 + CHECKLIST_CONTENUTO.length + CHECKLIST_CONTESTO.length)) * 100} className="mt-2 h-2" />
+                  <div className="text-3xl font-black">{scores.totaleFase1}<span className="text-sm font-normal text-slate-400"> / {400 + CHECKLIST_CONTENUTO.length + CHECKLIST_CONTESTO.length}</span></div>
+                  <Progress value={(scores.totaleFase1 / (400 + CHECKLIST_CONTENUTO.length + CHECKLIST_CONTESTO.length)) * 100} className="mt-2 h-2" />
                   <div className="mt-2">
                     <Badge className={cn(RISK_CONFIG[scores.rischioFase1].bg, "text-sm px-3 py-1")}>
                       {RISK_CONFIG[scores.rischioFase1].label}
