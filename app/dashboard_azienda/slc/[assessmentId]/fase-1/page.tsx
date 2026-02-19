@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useMemo, useEffect, useCallback } from "react"
-import { useParams } from "next/navigation"
+import { useParams, useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -38,7 +38,7 @@ import {
   suggestTrend, trendToScore, dichotomousScore, checklistItemScore,
   recalcAllScores,
 } from "@/lib/slc/scoring"
-import { createMockAssessment } from "@/lib/slc/mock-data"
+import { loadAssessment, saveAssessment, createMockAssessment } from "@/lib/slc/mock-data"
 import {
   CHECKLIST_CONTENUTO, CHECKLIST_CONTESTO, CHECKLIST_REMOTO,
   EVENTI_SENTINELLA_DEFS,
@@ -86,10 +86,11 @@ function groupByDimension<T extends { id: string }>(
 
 export default function SlcFase1Page() {
   const params = useParams()
+  const router = useRouter()
   const assessmentId = params.assessmentId as string
 
   const [assessment, setAssessment] = useState<SlcAssessment>(() =>
-    createMockAssessment(assessmentId)
+    loadAssessment(assessmentId) ?? createMockAssessment(assessmentId)
   )
   const [lastSaved, setLastSaved] = useState<Date | null>(null)
   const [isSaving, setIsSaving] = useState(false)
@@ -99,13 +100,13 @@ export default function SlcFase1Page() {
 
   // ===== AUTOSAVE =====
   useEffect(() => {
-    if (assessment.status === "final") return
     const timer = setTimeout(() => {
       setIsSaving(true)
+      saveAssessment(assessment)
       setTimeout(() => {
         setIsSaving(false)
         setLastSaved(new Date())
-      }, 500)
+      }, 300)
     }, 1500)
     return () => clearTimeout(timer)
   }, [assessment])
@@ -386,7 +387,7 @@ export default function SlcFase1Page() {
       {/* HEADER */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <Button variant="outline" size="icon" onClick={() => window.history.back()}>
+          <Button variant="outline" size="icon" onClick={() => router.push("/dashboard_azienda/slc")}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>

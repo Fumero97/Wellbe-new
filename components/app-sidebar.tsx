@@ -58,7 +58,7 @@ export function AppSidebar() {
     },
     {
       title: "SLC",
-      url: "/dashboard_azienda/slc/demo-001/fase-1",
+      url: "/dashboard_azienda/slc",
       icon: Brain,
     },
     {
