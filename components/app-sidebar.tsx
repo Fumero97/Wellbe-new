@@ -57,7 +57,7 @@ export function AppSidebar() {
       icon: Shield,
     },
     {
-      title: "Fase Propedeutica e Valutazione Preliminare",
+      title: "SLC",
       url: "/dashboard_azienda/slc",
       icon: Brain,
     },
