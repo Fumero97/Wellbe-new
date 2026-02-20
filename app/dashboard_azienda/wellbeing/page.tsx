@@ -17,14 +17,18 @@ import {
     Coffee,
     AlertTriangle,
     Files,
+    FileText,
     Check,
     ChevronsUpDown,
     Phone,
     MessageCircle,
-    Mail
+    Mail,
+    ChevronRight,
+    Clock,
+    Lock,
 } from "lucide-react"
 import { AreaChartDemo, BarChartDemo, ChartRadarLinesOnly, ChartLineMultiple } from "@/components/dashboard/charts"
-import { ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts"
+import { ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, LabelList } from "recharts"
 import { ChartConfig } from "@/components/ui/chart"
 import {
   Select,
@@ -34,8 +38,11 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
-import { useState, useEffect, Suspense } from "react"
-import { useSearchParams } from "next/navigation"
+import { useState, useEffect, useMemo, Suspense } from "react"
+import { useSearchParams, useRouter } from "next/navigation"
+import type { SlcAssessment, SlcRiskLevel } from "@/lib/slc/types"
+import { loadAssessments } from "@/lib/slc/mock-data"
+import { PERCEPTION_QUESTIONS, DIMENSION_DEFS, INTEGRATIVE_QUESTIONS, INTEGRATIVE_DIMENSION_DEFS } from "@/lib/slc/perception-questions"
 import { addDays, format } from "date-fns"
 import { DateRange } from "react-day-picker"
 import { Calendar } from "@/components/ui/calendar"
@@ -82,28 +89,38 @@ function SurveyParamReader({ surveys, onSelect }: { surveys: { id: string }[], o
 
 export default function AnalyticsPage() {
   const surveys = [
-    {
-      id: "1",
-      title: "Blue Wellbeing Survey - 2024 Q4",
-      status: "Closed",
-      date: "31 Dec 2024",
-    },
-    {
-      id: "2",
-      title: "Blue Wellbeing Survey - 2024 Q3",
-      status: "Closed",
-      date: "30 Sep 2024",
-    },
-    {
-        id: "3",
-        title: "Blue Wellbeing Survey - 2024 Q2",
-        status: "Closed",
-        date: "30 Jun 2024",
-      }
+    { id: "1", title: "Quarterly Wellness Assessment", type: "wellbeing",    status: "Active", date: "Nov 15, 2024" },
+    { id: "2", title: "DEI & Inclusion Survey",        type: "dei",          status: "Draft",  date: "Dec 01, 2024" },
+    { id: "3", title: "Safety Protocols Feedback",     type: "safety",       status: "Closed", date: "Sep 30, 2024" },
+    { id: "4", title: "Vendor Satisfaction Survey",    type: "supply-chain", status: "Active", date: "Nov 20, 2024" },
+    { id: "5", title: "Internal Stakeholder Review",   type: "stakeholders", status: "Draft",  date: "Dec 05, 2024" },
+    { id: "6", title: "Valutazione approfondita",       type: "slc",          status: "Active", date: "Mar 15, 2025" },
   ]
+
+  // Wellbeing sub-surveys (shown in the selector within the wellbeing view)
+  const wellbeingSurveys = [
+    { id: "wb-1", title: "Blue Wellbeing Survey - 2024 Q4", status: "Closed", date: "31 Dec 2024" },
+    { id: "wb-2", title: "Blue Wellbeing Survey - 2024 Q3", status: "Closed", date: "30 Sep 2024" },
+    { id: "wb-3", title: "Blue Wellbeing Survey - 2024 Q2", status: "Closed", date: "30 Jun 2024" },
+  ]
+
+  const router = useRouter()
 
   const [selectedSurveyId, setSelectedSurveyId] = useState(surveys[0].id)
   const selectedSurvey = surveys.find(s => s.id === selectedSurveyId) || surveys[0]
+
+  const [slcAssessments, setSlcAssessments] = useState<SlcAssessment[]>([])
+
+  useEffect(() => {
+    setSlcAssessments(loadAssessments())
+  }, [])
+
+  // Reload SLC data whenever the user switches to the SLC survey
+  useEffect(() => {
+    if (selectedSurvey.type === "slc") {
+      setSlcAssessments(loadAssessments())
+    }
+  }, [selectedSurvey.type])
 
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: new Date(2024, 0, 1),
@@ -127,16 +144,45 @@ export default function AnalyticsPage() {
     insights: true,
     demographics: true,
     history: true,
+    slcQuestions: true,
+    slcGroups: true,
+    slcIntegrative: true,
     orientation: 'portrait' as 'portrait' | 'landscape'
   })
+
+  // PDF filter configuration: which groups and demographic dimensions to include
+  const [pdfFilterConfig, setPdfFilterConfig] = useState<{
+    selectedGroups: string[]; // ["all", "group-1", ...] 
+    selectedDimensions: string[]; // ["Domanda", "Controllo", ...]
+  }>({
+    selectedGroups: ["all"],
+    selectedDimensions: ["Domanda", "Controllo", "Supporto Management", "Supporto Colleghi", "Relazioni", "Ruolo", "Cambiamento"]
+  })
+
+  // SLC filters
+  const [slcDemographicFilter, setSlcDemographicFilter] = useState<string>("all")
+  const [slcGroupFilter, setSlcGroupFilter] = useState<string>("all")
+  const [slcDimensionAnalysis, setSlcDimensionAnalysis] = useState<string>("general")
 
   const handleToggleSection = (section: keyof typeof reportConfig) => {
     setReportConfig(prev => ({ ...prev, [section]: !prev[section] }))
   }
+  // Helper: wait for next frame (allow React to re-render after state change)
+  const waitForRender = () => new Promise<void>(resolve => {
+    requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(resolve, 300)))
+  })
 
   const handlePreviewPDF = async () => {
     setIsPreviewing(true)
+    const origGroup = slcGroupFilter
+    const origDim = slcDimensionAnalysis
+
     try {
+      setSlcDimensionAnalysis("general");
+      const firstGroup = pdfFilterConfig.selectedGroups[0] || "all"
+      setSlcGroupFilter(firstGroup)
+      await waitForRender()
+
       const url = await generatePDFReport("wellbeing-report-content", "Preview", { 
         preview: true,
         orientation: reportConfig.orientation
@@ -145,6 +191,8 @@ export default function AnalyticsPage() {
     } catch (error) {
       toast.error("Errore durante la generazione della preview")
     } finally {
+      setSlcGroupFilter(origGroup)
+      setSlcDimensionAnalysis(origDim)
       setIsPreviewing(false)
     }
   }
@@ -152,15 +200,45 @@ export default function AnalyticsPage() {
   const handleDownloadPDF = async () => {
     setIsGeneratingPDF(true)
     const toastId = toast.loading("Generazione PDF in corso...")
+    const origGroup = slcGroupFilter
+    const origDim = slcDimensionAnalysis
+
     try {
-      await generatePDFReport("wellbeing-report-content", `Wellbeing_Report_${selectedSurvey.title.replace(/\s+/g, '_')}`, {
+      const groups = pdfFilterConfig.selectedGroups.length > 0 ? pdfFilterConfig.selectedGroups : ["all"]
+      setSlcDimensionAnalysis("general"); // Hardcoded, we don't split by demo anymore
+
+      const container = document.getElementById("pdf-collection-container");
+      if (container) container.innerHTML = '';
+
+      for (let gi = 0; gi < groups.length; gi++) {
+        setSlcGroupFilter(groups[gi])
+        await waitForRender()
+        const clone = document.getElementById("wellbeing-report-content")?.cloneNode(true) as HTMLElement;
+        if (clone && container) {
+          if (gi > 0) {
+             const pb = document.createElement("div");
+             pb.className = "page-break border-t border-slate-300 mt-8 pt-8";
+             pb.style.pageBreakBefore = "always";
+             pb.style.width = "100%";
+             container.appendChild(pb);
+          }
+          container.appendChild(clone);
+        }
+      }
+
+      await generatePDFReport("pdf-collection-container", "Report_SLC_Completo", {
         orientation: reportConfig.orientation
       })
-      toast.success("PDF scaricato con successo", { id: toastId })
+
+      if (container) container.innerHTML = '';
+      
+      toast.success(`Report PDF completo generato con successo`, { id: toastId })
       setIsReportDialogOpen(false)
     } catch (error) {
       toast.error("Errore durante la generazione del PDF", { id: toastId })
     } finally {
+      setSlcGroupFilter(origGroup)
+      setSlcDimensionAnalysis(origDim)
       setIsGeneratingPDF(false)
     }
   }
@@ -267,21 +345,6 @@ export default function AnalyticsPage() {
         performance: [
             { name: "Dirigente o Management", Colleghi: 5.0, Appartenenza: 4.8, Coinvolgimento: 4.9, "Work-life": 4.6, Leadership: 4.9, Soddisfazione: 4.7, Tecnologia: 4.8, Sicurezza: 4.1 },
             { name: "Intermedio o Team Leader", Colleghi: 4.9, Appartenenza: 4.8, Coinvolgimento: 4.9, "Work-life": 4.5, Leadership: 5.0, Soddisfazione: 4.8, Tecnologia: 4.6, Sicurezza: 4.1 },
-            { name: "Operazioni o collaboratore", Colleghi: 4.4, Appartenenza: 4.1, Coinvolgimento: 4.2, "Work-life": 4.0, Leadership: 4.4, Soddisfazione: 4.1, Tecnologia: 4.2, Sicurezza: 4.0 },
-        ]
-    },
-    gender: {
-        label: "Genere",
-        categories: ["M", "F", "N/S"],
-        distribution: [
-            { name: "M", value: 55, color: "#06b6d4" },
-            { name: "F", value: 40, color: "#22d3ee" },
-            { name: "N/S", value: 5, color: "#67e8f9" },
-        ],
-        performance: [
-            { name: "M", Colleghi: 5.2, Appartenenza: 4.4, Coinvolgimento: 6.0, "Work-life": 3.4, Leadership: 5.0, Soddisfazione: 4.2, Tecnologia: 5.5, Sicurezza: 6.1 },
-            { name: "F", Colleghi: 5.3, Appartenenza: 4.5, Coinvolgimento: 6.1, "Work-life": 3.3, Leadership: 5.1, Soddisfazione: 4.3, Tecnologia: 5.6, Sicurezza: 6.2 },
-            { name: "N/S", Colleghi: 5.1, Appartenenza: 4.3, Coinvolgimento: 5.9, "Work-life": 3.5, Leadership: 4.9, Soddisfazione: 4.1, Tecnologia: 5.4, Sicurezza: 6.0 },
         ]
     },
     maritalStatus: {
@@ -318,6 +381,115 @@ export default function AnalyticsPage() {
     }
   }
 
+  const slcDemographicAnalysis = useMemo(() => {
+    const seed = slcGroupFilter === "all" ? 1 : (parseInt(slcGroupFilter.split('-')[1]) || 1);
+    const scaleFactor = 0.8 + (seed % 5) * 0.1; // Variance between 0.8 and 1.2
+    
+    const baseData: any = {
+      general: {
+          label: "Valori Generali",
+          categories: ["Media Aziendale"],
+          distribution: [
+              { name: "Media Aziendale", value: 100, color: "#8b5cf6" },
+          ],
+          performance: [
+              { name: "Media Aziendale", Domanda: 52, Controllo: 50, "Supporto Management": 48, "Supporto Colleghi": 55, Relazioni: 50, Ruolo: 52, Cambiamento: 45 },
+          ]
+      },
+      gender: {
+          label: "Genere",
+          categories: ["M", "F", "N/S"],
+          distribution: [
+              { name: "M", value: Math.round(55 * scaleFactor), color: "#06b6d4" },
+              { name: "F", value: Math.round(40 * scaleFactor), color: "#22d3ee" },
+              { name: "N/S", value: Math.round(5 * scaleFactor), color: "#67e8f9" },
+          ],
+          performance: [
+              { name: "M", Domanda: 45, Controllo: 50, "Supporto Management": 48, "Supporto Colleghi": 55, Relazioni: 50, Ruolo: 52, Cambiamento: 45 },
+              { name: "F", Domanda: 48, Controllo: 45, "Supporto Management": 50, "Supporto Colleghi": 52, Relazioni: 55, Ruolo: 48, Cambiamento: 50 },
+              { name: "N/S", Domanda: 46, Controllo: 47, "Supporto Management": 49, "Supporto Colleghi": 53, Relazioni: 52, Ruolo: 50, Cambiamento: 47 },
+          ]
+      },
+      age_range: {
+          label: "Età",
+          categories: ["Fino a 30 anni", "Da 31 a 50 anni", "51 anni e oltre"],
+          distribution: [
+              { name: "Fino a 30 anni", value: Math.round(30 * scaleFactor), color: "#8b5cf6" },
+              { name: "Da 31 a 50 anni", value: Math.round(50 * scaleFactor), color: "#a78bfa" },
+              { name: "51 anni e oltre", value: Math.round(20 * scaleFactor), color: "#c4b5fd" },
+          ],
+          performance: [
+              { name: "Fino a 30 anni", Domanda: 40, Controllo: 55, "Supporto Management": 50, "Supporto Colleghi": 60, Relazioni: 55, Ruolo: 50, Cambiamento: 55 },
+              { name: "Da 31 a 50 anni", Domanda: 50, Controllo: 45, "Supporto Management": 45, "Supporto Colleghi": 50, Relazioni: 48, Ruolo: 55, Cambiamento: 45 },
+              { name: "51 anni e oltre", Domanda: 55, Controllo: 40, "Supporto Management": 40, "Supporto Colleghi": 45, Relazioni: 45, Ruolo: 45, Cambiamento: 40 },
+          ]
+      },
+      nationality: {
+          label: "Nazionalità",
+          categories: ["Italiana", "Non italiana"],
+          distribution: [
+              { name: "Italiana", value: Math.round(85 * scaleFactor), color: "#f43f5e" },
+              { name: "Non italiana", value: Math.round(15 * scaleFactor), color: "#fb7185" },
+          ],
+          performance: [
+              { name: "Italiana", Domanda: 47, Controllo: 48, "Supporto Management": 47, "Supporto Colleghi": 53, Relazioni: 51, Ruolo: 51, Cambiamento: 47 },
+              { name: "Non italiana", Domanda: 49, Controllo: 46, "Supporto Management": 49, "Supporto Colleghi": 51, Relazioni: 53, Ruolo: 49, Cambiamento: 49 },
+          ]
+      },
+      contract_type: {
+          label: "Tipologia contrattuale",
+          categories: ["Tempo indeterminato", "Tempo determinato", "Collaborazione", "Lavoro somministrato", "Altro"],
+          distribution: [
+              { name: "Tempo indeterminato", value: Math.round(70 * scaleFactor), color: "#10b981" },
+              { name: "Tempo determinato", value: Math.round(15 * scaleFactor), color: "#34d399" },
+              { name: "Collaborazione", value: Math.round(5 * scaleFactor), color: "#6ee7b7" },
+              { name: "Lavoro somministrato", value: Math.round(5 * scaleFactor), color: "#a7f3d0" },
+              { name: "Altro", value: Math.round(5 * scaleFactor), color: "#d1fae5" },
+          ],
+          performance: [
+              { name: "Tempo indeterminato", Domanda: 45, Controllo: 50, "Supporto Management": 48, "Supporto Colleghi": 55, Relazioni: 50, Ruolo: 52, Cambiamento: 45 },
+              { name: "Tempo determinato", Domanda: 55, Controllo: 40, "Supporto Management": 42, "Supporto Colleghi": 48, Relazioni: 45, Ruolo: 45, Cambiamento: 40 },
+              { name: "Collaborazione", Domanda: 50, Controllo: 45, "Supporto Management": 45, "Supporto Colleghi": 50, Relazioni: 48, Ruolo: 48, Cambiamento: 45 },
+              { name: "Lavoro somministrato", Domanda: 60, Controllo: 35, "Supporto Management": 38, "Supporto Colleghi": 42, Relazioni: 40, Ruolo: 40, Cambiamento: 35 },
+              { name: "Altro", Domanda: 52, Controllo: 48, "Supporto Management": 46, "Supporto Colleghi": 51, Relazioni: 49, Ruolo: 50, Cambiamento: 47 },
+          ]
+      },
+      working_time: {
+          label: "Tipologia orario di lavoro",
+          categories: ["Full time", "Part time verticale", "Part time orizzontale", "Part time misto"],
+          distribution: [
+              { name: "Full time", value: Math.round(65 * scaleFactor), color: "#3b82f6" },
+              { name: "Part time verticale", value: Math.round(15 * scaleFactor), color: "#60a5fa" },
+              { name: "Part time orizzontale", value: Math.round(12 * scaleFactor), color: "#93c5fd" },
+              { name: "Part time misto", value: Math.round(8 * scaleFactor), color: "#bfdbfe" },
+          ],
+          performance: [
+              { name: "Full time", Domanda: 46, Controllo: 52, "Supporto Management": 49, "Supporto Colleghi": 54, Relazioni: 51, Ruolo: 53, Cambiamento: 47 },
+              { name: "Part time verticale", Domanda: 48, Controllo: 48, "Supporto Management": 47, "Supporto Colleghi": 52, Relazioni: 53, Ruolo: 49, Cambiamento: 49 },
+              { name: "Part time orizzontale", Domanda: 50, Controllo: 45, "Supporto Management": 46, "Supporto Colleghi": 50, Relazioni: 48, Ruolo: 51, Cambiamento: 46 },
+              { name: "Part time misto", Domanda: 47, Controllo: 47, "Supporto Management": 48, "Supporto Colleghi": 53, Relazioni: 50, Ruolo: 50, Cambiamento: 48 },
+          ]
+      },
+      remote_work: {
+          label: "Lavoro da remoto",
+          categories: ["No", "Lavoro agile", "Telelavoro", "Lavoro decentrato"],
+          distribution: [
+              { name: "No", value: Math.round(40 * scaleFactor), color: "#f59e0b" },
+              { name: "Lavoro agile", value: Math.round(45 * scaleFactor), color: "#fbbf24" },
+              { name: "Telelavoro", value: Math.round(10 * scaleFactor), color: "#fcd34d" },
+              { name: "Lavoro decentrato", value: Math.round(5 * scaleFactor), color: "#fef3c7" },
+          ],
+          performance: [
+              { name: "No", Domanda: 52, Controllo: 42, "Supporto Management": 45, "Supporto Colleghi": 48, Relazioni: 46, Ruolo: 50, Cambiamento: 43 },
+              { name: "Lavoro agile", Domanda: 44, Controllo: 55, "Supporto Management": 52, "Supporto Colleghi": 58, Relazioni: 54, Ruolo: 55, Cambiamento: 52 },
+              { name: "Telelavoro", Domanda: 42, Controllo: 58, "Supporto Management": 50, "Supporto Colleghi": 55, Relazioni: 52, Ruolo: 52, Cambiamento: 50 },
+              { name: "Lavoro decentrato", Domanda: 48, Controllo: 47, "Supporto Management": 48, "Supporto Colleghi": 51, Relazioni: 49, Ruolo: 51, Cambiamento: 47 },
+          ]
+      }
+    };
+    return baseData;
+  }, [slcGroupFilter]);
+
   const surveyHistory = [
     { name: "Blue WellBe Survey - 2025 Q1", count: 15, bwi: "69,80", date: "28/02/2025" },
     { name: "Blue WellBe Survey - 2025 Q1", count: 14, bwi: "70,69", date: "19/03/2025" },
@@ -335,6 +507,25 @@ export default function AnalyticsPage() {
     Tecnologia: { label: "Tecnologia", color: "hsl(215, 25%, 35%)" },
     Sicurezza: { label: "Sicurezza", color: "hsl(43, 96%, 58%)" },
   } satisfies ChartConfig
+
+  const slcMetricsConfig = {
+    Domanda: { label: "Domanda", color: "hsl(142, 71%, 45%)" },
+    Controllo: { label: "Controllo", color: "hsl(199, 89%, 48%)" },
+    "Supporto Management": { label: "Supporto Management", color: "hsl(271, 91%, 65%)" },
+    "Supporto Colleghi": { label: "Supporto Colleghi", color: "hsl(31, 90%, 55%)" },
+    Relazioni: { label: "Relazioni", color: "hsl(346, 84%, 61%)" },
+    Ruolo: { label: "Ruolo", color: "hsl(175, 77%, 42%)" },
+    Cambiamento: { label: "Cambiamento", color: "hsl(43, 96%, 58%)" },
+  } satisfies ChartConfig
+
+  const slcTrendData = [
+    { name: "Gen", Domanda: 42, Controllo: 48, "Supporto Management": 45, "Supporto Colleghi": 52, Relazioni: 49, Ruolo: 50, Cambiamento: 43 },
+    { name: "Feb", Domanda: 44, Controllo: 46, "Supporto Management": 47, "Supporto Colleghi": 50, Relazioni: 51, Ruolo: 52, Cambiamento: 45 },
+    { name: "Mar", Domanda: 46, Controllo: 44, "Supporto Management": 49, "Supporto Colleghi": 48, Relazioni: 53, Ruolo: 54, Cambiamento: 47 },
+    { name: "Apr", Domanda: 45, Controllo: 45, "Supporto Management": 48, "Supporto Colleghi": 49, Relazioni: 52, Ruolo: 53, Cambiamento: 46 },
+    { name: "Mag", Domanda: 47, Controllo: 47, "Supporto Management": 50, "Supporto Colleghi": 51, Relazioni: 54, Ruolo: 55, Cambiamento: 48 },
+    { name: "Giu", Domanda: 48, Controllo: 49, "Supporto Management": 51, "Supporto Colleghi": 53, Relazioni: 56, Ruolo: 57, Cambiamento: 50 },
+  ]
 
   const radarConfig = {
     score: {
@@ -411,8 +602,8 @@ export default function AnalyticsPage() {
       {/* Header & Controls */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
          <div className="space-y-1">
-            <h1 className="text-3xl font-bold tracking-tight text-slate-900">Analytics</h1>
-            <p className="text-slate-500">Deep dive into organization wellbeing metrics.</p>
+            <h1 className="text-3xl font-bold tracking-tight text-slate-900">Valutazione approfondita</h1>
+            <p className="text-slate-500">Analisi dettagliata delle metriche di stress lavoro correlato.</p>
          </div>
          <div className="flex flex-wrap items-center gap-2">
             <Button variant="outline" size="sm" className="gap-2">
@@ -482,6 +673,763 @@ export default function AnalyticsPage() {
         </CardContent>
       </Card>
 
+      {/* ===== SLC Results View ===== */}
+      {selectedSurvey.type === "slc" && (
+        <div className="space-y-6">
+
+          {/* SLC KPI cards */}
+          {(() => {
+            const completedAssessments = slcAssessments.filter(a => a.fase2.status === "completata");
+            const activeAssessments = slcGroupFilter === "all" ? completedAssessments : slcAssessments.filter(a => a.id === slcGroupFilter);
+            
+            const slcRadarData = DIMENSION_DEFS.map(dim => {
+              let points = 0;
+              let count = 0;
+              
+              activeAssessments.forEach(a => {
+                const dimScore = a.fase2.dimensioni.find(d => d.nome === dim.nome);
+                if (dimScore) {
+                  // Invert relative to risk if necessary, or use as is
+                  // For these charts, usually 100 = optimal wellbeing, but fase2.dimensioni score is usually risk
+                  // Let's normalize it to a 1-5 or min-max range for points
+                  const riskPercentage = dimScore.score;
+                  const wellbeingPercentage = 100 - riskPercentage;
+                  points += dim.minScore + (wellbeingPercentage / 100) * (dim.maxScore - dim.minScore);
+                  count++;
+                }
+              });
+
+              if (count === 0) {
+                // Return seeded mock data if no real data found for this group
+                const seed = slcGroupFilter === "all" ? 5 : parseInt(slcGroupFilter.split('-')[1]) || 5;
+                const pseudoRandom = ((seed * (DIMENSION_DEFS.indexOf(dim) + 1)) % 100) / 100;
+                const range = dim.maxScore - dim.minScore;
+                points = dim.minScore + (0.4 + pseudoRandom * 0.4) * range;
+              } else {
+                points = points / count;
+              }
+
+              const score = Math.round(((points - dim.minScore) / (dim.maxScore - dim.minScore)) * 100);
+              return { 
+                area: dim.nome, 
+                score: score, 
+                points: Math.round(points), 
+                maxPoints: dim.maxScore 
+              };
+            });
+            const slcTotalPoints = slcRadarData.reduce((acc, curr) => acc + curr.points, 0);
+
+            const integrativeRadarData = INTEGRATIVE_DIMENSION_DEFS.map((dim, idx) => {
+              const seed = slcGroupFilter === "all" ? 12 : (parseInt(slcGroupFilter.split('-')[1]) || 12);
+              const pseudoRandom = ((seed * (idx + 13)) % 100) / 100;
+              const range = dim.maxScore - dim.minScore;
+              const points = dim.minScore + (0.3 + pseudoRandom * 0.5) * range;
+              const score = Math.round(((points - dim.minScore) / (dim.maxScore - dim.minScore)) * 100);
+              return {
+                area: dim.nome,
+                shortName: dim.shortName,
+                score: score, // This is 0-100 percentage
+                points: Math.round(points), // This is total points
+                maxPoints: dim.maxScore
+              };
+            });
+
+            const integrativeOverallScore = (integrativeRadarData.reduce((acc, curr) => acc + (curr.points / (curr.maxPoints / 5)), 0) / integrativeRadarData.length).toFixed(1);
+            const integrativeOverallStatus = (() => {
+               const numScore = parseFloat(integrativeOverallScore);
+               if (numScore >= 4.0) return { label: "Eccellente", color: "bg-indigo-100 text-indigo-700" };
+               if (numScore >= 3.0) return { label: "Buono", color: "bg-blue-100 text-blue-700" };
+               if (numScore >= 2.0) return { label: "Moderato", color: "bg-amber-100 text-amber-700" };
+               return { label: "Critico", color: "bg-rose-100 text-rose-700" };
+            })();
+
+            const getSlcStatus = (score: number) => {
+              if (score >= 80) return { label: "Ottimale", color: "bg-emerald-100 text-emerald-700" };
+              if (score >= 60) return { label: "Buono", color: "bg-blue-100 text-blue-700" };
+              if (score >= 40) return { label: "Basso", color: "bg-yellow-100 text-yellow-700" };
+              return { label: "Critico", color: "bg-red-100 text-red-700" };
+            };
+
+            return <>
+                {/* Single KPI Container Card */}
+                <Card className={cn("border-slate-200 shadow-sm overflow-hidden bg-white mb-6 break-inside-avoid", !reportConfig.kpis && !reportConfig.radar && "hidden no-pdf")}>
+                  <div className="bg-slate-50 border-b border-slate-100 px-6 py-3 flex items-center justify-between no-pdf">
+                    <div className="flex items-center gap-2">
+                      <Filter className="h-4 w-4 text-slate-400" />
+                      <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Filtra Risultati Dashboard</span>
+                    </div>
+                    <Select value={slcGroupFilter} onValueChange={setSlcGroupFilter}>
+                      <SelectTrigger className="w-[250px] h-9 text-xs bg-white border-slate-200 shadow-sm">
+                        <SelectValue placeholder="Tutti i gruppi omogenei" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Tutti i gruppi omogenei</SelectItem>
+                        {slcAssessments.map(a => (
+                          <SelectItem key={a.id} value={a.id}>{a.setup.nomeGruppoOmogeneo}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <CardContent className="p-0">
+                    <div className="flex flex-col lg:flex-row">
+                      {/* Left Column: Totals & ISLC */}
+                      <div className={cn("w-full lg:w-1/3 p-6 bg-slate-50/50 lg:border-r border-slate-100 flex flex-col justify-center gap-8", !reportConfig.kpis && "hidden no-pdf")}>
+                        <div>
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 flex items-center gap-2">
+                             <Users className="h-3 w-3" /> Risposte totali
+                          </p>
+                          <div className="flex items-baseline gap-3">
+                            <span className="text-4xl font-black text-slate-900 tracking-tight">
+                              {slcGroupFilter === "all" 
+                                ? slcAssessments.reduce((acc, a) => acc + (a.fase2?.numPartecipanti || 0), 0)
+                                : slcAssessments.find(a => a.id === slcGroupFilter)?.fase2?.numPartecipanti || 0
+                              }
+                            </span>
+                          </div>
+                        </div>
+
+                        {(() => {
+                           const totalPercentage = Math.round((slcTotalPoints / 175) * 100);
+                           const status = getSlcStatus(totalPercentage);
+                           // Map bg-color-100 to solid color-600
+                           const solidColor = status.color.includes('emerald') ? 'bg-emerald-600' : 
+                                              status.color.includes('blue')    ? 'bg-blue-600' :
+                                              status.color.includes('yellow')  ? 'bg-amber-500' : 'bg-red-600';
+                           
+                           return (
+                             <div className={`${solidColor} p-5 rounded-2xl shadow-lg relative overflow-hidden group`}>
+                               <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:scale-110 transition-transform">
+                                 <Brain className="h-16 w-16 text-white" />
+                               </div>
+                               <p className="text-[10px] font-bold text-white/80 uppercase tracking-widest mb-1 relative z-10">
+                                 Indice Stress Lavoro Correlato
+                               </p>
+                               <div className="flex items-baseline gap-1 text-white relative z-10">
+                                 <span className="text-4xl font-black">{slcTotalPoints}</span>
+                                 <span className="text-sm font-bold opacity-60">/ 175</span>
+                               </div>
+                               <div className="mt-3 relative z-10">
+                                 <Badge className="bg-white/20 hover:bg-white/30 text-white border-none text-[10px] font-bold backdrop-blur-md px-3">
+                                   Stato: {status.label}
+                                 </Badge>
+                               </div>
+                             </div>
+                           );
+                        })()}
+                      </div>
+
+                      {/* Right Area: Dimension Grid */}
+                      <div className={cn("flex-1 p-6 flex flex-col justify-center", !reportConfig.radar && "hidden no-pdf")}>
+                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                          {slcRadarData.map((d) => {
+                            const status = getSlcStatus(d.score);
+                            return (
+                              <div key={d.area} className="group p-3 rounded-xl bg-slate-50 border border-slate-100 hover:bg-white hover:border-violet-200 hover:shadow-md transition-all duration-300">
+                                <div className="flex items-center justify-between gap-2 mb-2">
+                                  <p className="text-[9px] font-bold text-slate-500 uppercase tracking-tight truncate">{d.area}</p>
+                                  <Badge className={`${status.color} border-none text-[7px] font-bold uppercase h-3.5 px-1.5`}>
+                                    {status.label}
+                                  </Badge>
+                                </div>
+                                <div className="flex items-baseline gap-1">
+                                  <span className="text-xl font-black text-slate-900 leading-none">{d.points}</span>
+                                  <span className="text-[9px] font-bold text-slate-400">/ {d.maxPoints}</span>
+                                </div>
+                              </div>
+                            );
+                          })}
+                          
+                          {/* Integrative Dimension Badge */}
+                          <div className="group p-3 rounded-xl bg-indigo-50/30 border border-indigo-100 hover:bg-white hover:border-indigo-300 hover:shadow-md transition-all duration-300">
+                            <div className="flex items-center justify-between gap-2 mb-2">
+                              <p className="text-[8.5px] font-black text-indigo-600 uppercase tracking-tight truncate">Remote Work & Tech</p>
+                              <Badge className={`${integrativeOverallStatus.color} border-none text-[7px] font-bold uppercase h-3.5 px-1.5`}>
+                                {integrativeOverallStatus.label}
+                              </Badge>
+                            </div>
+                            <div className="flex items-baseline gap-1">
+                              <span className="text-xl font-black text-indigo-700 leading-none">{integrativeOverallScore}</span>
+                              <span className="text-[9px] font-bold text-indigo-300">/ 5.0</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Question Detail (Swapped Order) */}
+                <Card className={cn("border-slate-200 shadow-sm mt-8 break-inside-avoid", !reportConfig.slcQuestions && "hidden no-pdf")}>
+                  <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4">
+                    <div className="space-y-1">
+                      <CardTitle className="text-base font-bold text-slate-900">Dettaglio Domande per Dimensione</CardTitle>
+                      <CardDescription className="text-xs text-slate-500">Analisi granulare dei risultati per ogni item del questionario</CardDescription>
+                    </div>
+                    
+                    <div className={cn("flex items-center gap-3", (isGeneratingPDF || isPreviewing) && "hidden no-pdf")}>
+                      <Select 
+                        value={attentionArea === "Colleghi" ? "Domanda" : attentionArea} 
+                        onValueChange={(v) => setAttentionArea(v)}
+                      >
+                        <SelectTrigger className="w-[180px] h-8 text-xs">
+                          <SelectValue placeholder="Scegli Dimensione" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Object.keys(slcMetricsConfig).map((dim) => (
+                            <SelectItem key={dim} value={dim}>{dim}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </CardHeader>
+
+                  <CardContent>
+                    <div className="space-y-4">
+                      {/* Real Questions based on selected dimension */}
+                      {(() => {
+                        const dimsToRender = (isGeneratingPDF || isPreviewing) 
+                            ? pdfFilterConfig.selectedDimensions 
+                            : [attentionArea === "Colleghi" ? "Domanda" : attentionArea];
+
+                        if (dimsToRender.length === 0) return null;
+
+                        return (
+                          <div className="space-y-12">
+                            {dimsToRender.map((selectedDimName, dimIdx) => {
+                              const dimDef = DIMENSION_DEFS.find(d => d.nome === selectedDimName);
+                              const filteredQuestions = PERCEPTION_QUESTIONS.filter(q => q.dimensione === selectedDimName);
+                              const showBreakdown = slcDimensionAnalysis !== 'general';
+                              
+                              const seed = slcGroupFilter === "all" ? 10 : (parseInt(slcGroupFilter.split('-')[1]) || 10);
+                              const questionPoints = filteredQuestions.map((q, idx) => {
+                                const qSeed = (seed + parseInt(q.id)) * 13;
+                                return 2 + ((qSeed % 30) / 10);
+                              });
+                              const qScoreData = slcRadarData.find(d => d.area === selectedDimName);
+                              const totalDimPoints = qScoreData ? qScoreData.points : 0;
+
+                              const gridCols = showBreakdown 
+                                ? "grid-cols-[60px_1fr_100px_100px_280px]" 
+                                : "grid-cols-[60px_1fr_100px_100px]";
+
+                              return (
+                                <div key={selectedDimName} className={cn("break-inside-avoid shadow-none", dimIdx > 0 && "mt-12")}>
+                                  <div className="bg-violet-50/50 p-4 rounded-xl border border-violet-100 mb-6 flex flex-col md:flex-row items-center justify-between gap-4">
+                              <div className="flex items-center gap-4">
+                                <div className="h-12 w-12 rounded-full bg-violet-100 flex items-center justify-center border border-violet-200">
+                                  <Brain className="h-6 w-6 text-violet-600" />
+                                </div>
+                                <div className="space-y-1">
+                                  <div className="flex items-center gap-2">
+                                    <p className="text-[10px] font-bold text-violet-600 uppercase tracking-widest leading-none">Dimensione Selezionata</p>
+                                    {(() => {
+                                      const d = slcRadarData.find(item => item.area === selectedDimName);
+                                      if (!d) return null;
+                                      const status = getSlcStatus(d.score);
+                                      return (
+                                        <Badge className={`${status.color} border-none text-[8px] font-bold uppercase h-3.5 px-1.5`}>
+                                          {status.label}
+                                        </Badge>
+                                      );
+                                    })()}
+                                  </div>
+                                  <h3 className="text-xl font-black text-violet-900 leading-none">{selectedDimName}</h3>
+                                </div>
+                              </div>
+                              
+                              <div className="flex flex-wrap items-center gap-6">
+                                <div className="text-right border-violet-200">
+                                  <p className="text-[10px] text-violet-500 font-bold uppercase tracking-tight">Punteggio Totale</p>
+                                  <p className="text-2xl font-black text-violet-700">{totalDimPoints} <span className="text-xs font-medium text-violet-400">/ {dimDef?.maxScore || '--'} pts</span></p>
+                                </div>
+                              </div>
+                            </div>
+
+                             <div className="border border-slate-100 rounded-xl overflow-hidden bg-white">
+                              <div className={`grid ${gridCols} bg-slate-50 border-b border-slate-200 py-3 px-4 mt-0`}>
+                                 <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">ID</div>
+                                 <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider text-left">Domanda</div>
+                                 <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center">Punteggio</div>
+                                 <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center w-[100px]">Stato</div>
+                                 {showBreakdown && (
+                                   <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center">Breakdown {(slcDemographicAnalysis as any)[slcDimensionAnalysis]?.label}</div>
+                                 )}
+                              </div>
+
+                              <div className="divide-y divide-slate-100">
+                                {filteredQuestions.map((q, qIdx) => {
+                                  const qScore = questionPoints[qIdx];
+                                  const qPercentage = ((qScore - 1) / 4) * 100;
+                                  const currentDemo = (slcDemographicAnalysis as any)[slcDimensionAnalysis];
+                                  const breakdownData = currentDemo.performance.map((p: any) => ({
+                                    name: p.name,
+                                    score: 1 + Math.random() * 4
+                                  }));
+
+                                  return (
+                                    <div key={q.id} className={`grid ${gridCols} items-center py-4 px-4 hover:bg-slate-50/50 transition-colors group`}>
+                                      <div className="text-xs font-bold text-slate-400">Q{q.id}</div>
+                                      <div className="pr-4 text-sm text-slate-600 font-medium leading-tight group-hover:text-slate-900 line-clamp-2">
+                                        {q.testo}
+                                      </div>
+                                      <div className="flex flex-col items-center gap-1.5 px-4">
+                                        <div className="flex items-baseline gap-1">
+                                          <span className="text-base font-black text-violet-700">{qScore.toFixed(1)}</span>
+                                          <span className="text-[8px] font-bold text-slate-400 uppercase">/5</span>
+                                        </div>
+                                        <div className="w-full bg-slate-100 rounded-full h-1 overflow-hidden">
+                                          <div 
+                                            className="h-full bg-violet-500 rounded-full" 
+                                            style={{ width: `${qPercentage}%` }} 
+                                          />
+                                        </div>
+                                      </div>
+                                      <div className="flex justify-center w-[100px]">
+                                        {(() => {
+                                          let status = { label: "Critico", color: "bg-red-100 text-red-700" };
+                                          if (qScore >= 4.0) status = { label: "Ottimo", color: "bg-emerald-100 text-emerald-700" };
+                                          else if (qScore >= 3.0) status = { label: "Buono", color: "bg-blue-100 text-blue-700" };
+                                          else if (qScore >= 2.0) status = { label: "Scarso", color: "bg-yellow-100 text-yellow-700" };
+                                          
+                                          return (
+                                            <Badge className={`${status.color} border-none text-[9px] font-bold uppercase h-5 w-full justify-center`}>
+                                              {status.label}
+                                            </Badge>
+                                          );
+                                        })()}
+                                      </div>
+                                      {showBreakdown && (
+                                        <div className="h-[50px] w-full">
+                                          <ResponsiveContainer width="100%" height="100%">
+                                            <BarChart 
+                                              data={breakdownData} 
+                                              margin={{ top: 15, right: 40, left: 40, bottom: 0 }}
+                                            >
+                                              <YAxis domain={[1, 6]} hide />
+                                              <Bar dataKey="score" radius={[2, 2, 0, 0]} barSize={16}>
+                                                {breakdownData.map((entry: any, index: number) => (
+                                                  <Cell 
+                                                    key={`cell-${index}`} 
+                                                    fill={currentDemo.distribution[index]?.color || '#8b5cf6'} 
+                                                  />
+                                                ))}
+                                                <LabelList 
+                                                  dataKey="score" 
+                                                  position="top" 
+                                                  offset={4}
+                                                  fill="#64748b" 
+                                                  fontSize={7} 
+                                                  fontWeight="bold"
+                                                  formatter={(val: number) => val.toFixed(1)}
+                                                />
+                                              </Bar>
+                                            </BarChart>
+                                          </ResponsiveContainer>
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                              
+                              {/* Table Footer with Centered Legend under Breakdown column */}
+                              {showBreakdown && (
+                                <div className={`bg-slate-50/50 border-t border-slate-100 py-3 px-4 grid ${gridCols}`}>
+                                    <div className="col-start-5 flex flex-wrap gap-x-4 gap-y-1 justify-center align-middle">
+                                      {(slcDemographicAnalysis as any)[slcDimensionAnalysis]?.distribution.map((entry: any, idx: number) => (
+                                        <div key={idx} className="flex items-center gap-1.5">
+                                          <div className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: entry.color }} />
+                                          <span className="text-[7px] font-bold text-slate-500 uppercase tracking-tighter">{entry.name}</span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                </div>
+                              )}
+                            </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Demographic Analysis (Swapped Order) */}
+                <Card className={cn("border-slate-200 shadow-sm mt-8 break-inside-avoid", !reportConfig.demographics && "hidden no-pdf")}>
+                  <CardHeader className="flex flex-row items-center justify-between pb-2">
+                    <div>
+                      <CardTitle className="text-lg">Analisi per Dato Anagrafico</CardTitle>
+                      <CardDescription>Confronto delle aree SLC tra diversi gruppi</CardDescription>
+                    </div>
+                    <Select value={slcDimensionAnalysis} onValueChange={setSlcDimensionAnalysis}>
+                      <SelectTrigger className="w-[180px] h-8 text-xs no-pdf">
+                        <SelectValue placeholder="Seleziona dimensione" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="general">Generale</SelectItem>
+                        <SelectItem value="gender">Genere</SelectItem>
+                        <SelectItem value="age_range">Età</SelectItem>
+                        <SelectItem value="nationality">Nazionalità</SelectItem>
+                        <SelectItem value="contract_type">Tipologia contrattuale</SelectItem>
+                        <SelectItem value="working_time">Tipologia orario di lavoro</SelectItem>
+                        <SelectItem value="remote_work">Lavoro da remoto</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </CardHeader>
+                  <CardContent className="pt-6">
+                    <div className={`grid gap-8 ${slcDimensionAnalysis === 'general' ? 'grid-cols-1' : 'md:grid-cols-5'}`}>
+                    {/* Distribution - Hidden if General */}
+                    {slcDimensionAnalysis !== 'general' && (
+                      <div className="md:col-span-2 space-y-4 text-center md:text-left">
+                        <h4 className="text-sm font-semibold text-slate-900 border-l-4 border-blue-500 pl-3">Distribuzione partecipanti</h4>
+                        <div className="h-[220px]">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                              <Pie
+                                data={(slcDemographicAnalysis as any)[slcDimensionAnalysis]?.distribution}
+                                cx="50%"
+                                cy="50%"
+                                innerRadius={60}
+                                outerRadius={85}
+                                paddingAngle={5}
+                                dataKey="value"
+                              >
+                                {(slcDemographicAnalysis as any)[slcDimensionAnalysis]?.distribution.map((entry: any, index: number) => (
+                                  <Cell key={`cell-${index}`} fill={entry.color} />
+                                ))}
+                              </Pie>
+                              <Tooltip />
+                            </PieChart>
+                          </ResponsiveContainer>
+                        </div>
+                        <div className="flex flex-wrap justify-center gap-x-4 gap-y-2">
+                          {(slcDemographicAnalysis as any)[slcDimensionAnalysis]?.distribution.map((entry: any) => (
+                            <div key={entry.name} className="flex items-center gap-1.5">
+                              <div className="h-2 w-2 rounded-full" style={{ backgroundColor: entry.color }} />
+                              <span className="text-[10px] font-medium text-slate-500">{entry.name} ({entry.value}%)</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Performance by Category - Grouped Bar Chart */}
+                    <div className={`${slcDimensionAnalysis === 'general' ? 'col-span-1' : 'md:col-span-3'} space-y-4`}>
+                      <h4 className="text-sm font-semibold text-slate-900 border-l-4 border-violet-500 pl-3">
+                        {slcDimensionAnalysis === 'general' ? 'Punteggi Medi Generali' : 'Dettaglio Punteggi per Dimensione'}
+                      </h4>
+                      <div className="h-[300px] w-full pt-2">
+                        {(() => {
+                          const analysisData = (slcDemographicAnalysis as any)[slcDimensionAnalysis];
+                          const categories = analysisData.categories;
+                          const performance = analysisData.performance;
+                          
+                          // Transform data: we want one entry per dimension, with categories as keys
+                          const chartData = DIMENSION_DEFS.map(dim => {
+                            const entry: any = { name: dim.nome, max: dim.maxScore };
+                            performance.forEach((p: any) => {
+                              const percentage = p[dim.nome] || 50;
+                              const points = dim.minScore + (percentage / 100) * (dim.maxScore - dim.minScore);
+                              entry[p.name] = parseFloat(points.toFixed(1));
+                            });
+                            return entry;
+                          });
+
+                          return (
+                            <ResponsiveContainer width="100%" height="100%">
+                              <BarChart data={chartData} margin={{ top: 20, right: 30, left: 0, bottom: 20 }}>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-slate-100" />
+                                <XAxis 
+                                  dataKey="name" 
+                                  axisLine={false} 
+                                  tickLine={false} 
+                                  tick={{ fill: '#64748b', fontSize: 10, fontWeight: 500 }}
+                                />
+                                <YAxis 
+                                  axisLine={false} 
+                                  tickLine={false} 
+                                  tick={{ fill: '#64748b', fontSize: 10 }}
+                                />
+                                <Tooltip 
+                                  cursor={{ fill: 'rgba(241, 245, 249, 0.5)' }}
+                                  content={({ active, payload, label }) => {
+                                    if (active && payload && payload.length) {
+                                      const dim = DIMENSION_DEFS.find(d => d.nome === label);
+                                      return (
+                                        <div className="bg-white p-3 shadow-xl border border-slate-100 rounded-lg text-xs space-y-2">
+                                          <p className="font-bold text-slate-900 border-b pb-1">{label}</p>
+                                          <div className="space-y-1">
+                                            {payload.map((entry: any, idx: number) => (
+                                              <div key={idx} className="flex items-center justify-between gap-4">
+                                                <div className="flex items-center gap-1.5">
+                                                  <div className="h-2 w-2 rounded-full" style={{ backgroundColor: entry.color }} />
+                                                  <span className="text-slate-600">{entry.name}:</span>
+                                                </div>
+                                                <span className="font-bold text-slate-900">{entry.value} / {dim?.maxScore}</span>
+                                              </div>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      );
+                                    }
+                                    return null;
+                                  }}
+                                />
+                                {categories.map((cat: string, index: number) => (
+                                  <Bar 
+                                    key={cat} 
+                                    dataKey={cat} 
+                                    fill={analysisData.distribution.find((d: any) => d.name === cat)?.color || `hsl(262, ${80 - index * 10}%, ${60 + index * 5}%)`} 
+                                    radius={[4, 4, 0, 0]}
+                                    barSize={categories.length > 3 ? 15 : 40}
+                                  >
+                                    <LabelList 
+                                      dataKey={cat} 
+                                      position="insideTop" 
+                                      offset={8}
+                                      fill="white" 
+                                      fontSize={9} 
+                                      fontWeight="bold"
+                                      formatter={(val: number) => val.toFixed(1)}
+                                    />
+                                  </Bar>
+                                ))}
+                              </BarChart>
+                            </ResponsiveContainer>
+                          );
+                        })()}
+                      </div>
+                      {slcDimensionAnalysis !== 'general' && (
+                        <div className="flex flex-wrap items-center justify-center gap-4 mt-2">
+                          {(slcDemographicAnalysis as any)[slcDimensionAnalysis]?.distribution.map((entry: any) => (
+                            <div key={entry.name} className="flex items-center gap-1.5">
+                              <div className="h-2 w-2 rounded-full" style={{ backgroundColor: entry.color }} />
+                              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tight">{entry.name}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+              </CardContent>
+            </Card>
+
+            {/* NEW: Dimensioni Integrative Card */}
+            <Card className={cn("border-indigo-200 shadow-sm mt-8 border-l-8 border-l-indigo-500 overflow-hidden break-inside-avoid", !reportConfig.slcIntegrative && "hidden no-pdf")}>
+              <CardHeader className="bg-indigo-50/50 border-b border-indigo-100 flex flex-row items-center justify-between">
+                <div className="flex items-center gap-4">
+                    <div className="p-3 rounded-2xl bg-indigo-100/80 shadow-inner">
+                        <Activity className="h-6 w-6 text-indigo-700" />
+                    </div>
+                    <div>
+                        <CardTitle className="text-xl font-black text-indigo-900 tracking-tight text-indigo-950">Dimensioni integrative per il lavoro da remoto e innovazione tecnologica</CardTitle>
+                        <CardDescription className="text-indigo-600/80 font-medium">Analisi trasversale dei nuovi paradigmi lavorativi digitali</CardDescription>
+                    </div>
+                </div>
+                <div className="flex flex-col items-end gap-2 pr-4">
+                    <div className="flex items-baseline gap-1">
+                        <span className="text-3xl font-black text-indigo-700 tracking-tighter leading-none">{integrativeOverallScore}</span>
+                        <span className="text-xs font-bold text-indigo-300">/ 5.0</span>
+                    </div>
+                    <Badge className={`${integrativeOverallStatus.color} border-none text-[8px] font-black uppercase h-4 px-2 tracking-widest`}>
+                        {integrativeOverallStatus.label}
+                    </Badge>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-8">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
+                    {/* Left: Radar Chart */}
+                    <div className="lg:col-span-5 flex flex-col items-center justify-center p-6 bg-slate-50/50 rounded-3xl border border-slate-100 relative overflow-hidden group">
+                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-indigo-500/20 to-transparent" />
+                        <h4 className="text-xs font-black text-indigo-900 uppercase tracking-[0.2em] mb-8 bg-indigo-100/50 px-4 py-1.5 rounded-full">Radar delle Sottodimensioni</h4>
+                        <div className="w-full h-[320px]">
+                            <ResponsiveContainer width="100%" height="100%">
+                                   <ChartRadarLinesOnly 
+                                      data={integrativeRadarData.map(d => ({ area: d.shortName, score: (d.points / (d.maxPoints / 5)).toFixed(1) }))} 
+                                      config={{
+                                        score: { label: "Punteggio", color: "#6366f1" }
+                                      }}
+                                      showScoreInLabels={true}
+                                      domain={[1, 5]}
+                                   />
+                            </ResponsiveContainer>
+                        </div>
+                    </div>
+
+                    {/* Right: Detailed Table */}
+                    <div className="lg:col-span-7 space-y-6">
+                        <div className="border border-indigo-100 rounded-3xl overflow-hidden shadow-sm bg-white">
+                            <div className="grid grid-cols-[1fr_80px_100px] bg-indigo-50/30 border-b border-indigo-100 py-4 px-6">
+                                <div className="text-[10px] font-black text-indigo-900 uppercase tracking-widest">Sottodimensione / Item</div>
+                                <div className="text-[10px] font-black text-indigo-900 uppercase tracking-widest text-center">Score</div>
+                                <div className="text-[10px] font-black text-indigo-900 uppercase tracking-widest text-center">Stato</div>
+                            </div>
+                            <div className="divide-y divide-slate-50 max-h-[500px] overflow-y-auto custom-scrollbar">
+                                {INTEGRATIVE_DIMENSION_DEFS.map((dim) => {
+                                    const dimData = integrativeRadarData.find(d => d.area === dim.nome);
+                                    const dimQuestions = INTEGRATIVE_QUESTIONS.filter(q => q.dimensione === dim.shortName);
+                                    const score = dimData?.score || 0;
+                                    let status = { label: "Critico", color: "bg-rose-100 text-rose-700" };
+                                    if (score >= 80) status = { label: "Ottimo", color: "bg-emerald-100 text-emerald-700" };
+                                    else if (score >= 60) status = { label: "Buono", color: "bg-blue-100 text-blue-700" };
+                                    else if (score >= 40) status = { label: "Scarso", color: "bg-amber-100 text-amber-700" };
+
+                                    return (
+                                        <div key={dim.nome} className="group">
+                                            {/* Dimension Header Row */}
+                                            <div className="grid grid-cols-[1fr_80px_100px] items-center py-4 px-6 bg-indigo-50/10 group-hover:bg-indigo-50/30 transition-colors">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="h-2 w-2 rounded-full bg-indigo-400" />
+                                                    <span className="text-sm font-black text-indigo-900">{dim.nome}</span>
+                                                </div>
+                                                <div className="text-center">
+                                                    <span className="text-sm font-black text-indigo-700">{(dimData?.points ? (dimData.points / (dimData.maxPoints / 5)).toFixed(1) : "0.0")}</span>
+                                                </div>
+                                                <div className="flex justify-center">
+                                                    <Badge className={`${status.color} border-none text-[8px] font-black uppercase h-4 w-full justify-center`}>
+                                                        {status.label}
+                                                    </Badge>
+                                                </div>
+                                            </div>
+                                            {/* Item Rows */}
+                                            <div className="bg-white/50 divide-y divide-slate-50/50">
+                                                {dimQuestions.map((q) => (
+                                                    <div key={q.id} className="grid grid-cols-[1fr_80px] items-center py-3 pl-12 pr-6 hover:bg-slate-50/30 transition-colors">
+                                                        <div className="flex items-start gap-3">
+                                                            <span className="text-[10px] font-bold text-slate-300 mt-0.5">#{q.id}</span>
+                                                            <span className="text-xs text-slate-500 font-medium leading-tight">{q.testo}</span>
+                                                        </div>
+                                                        <div className="flex justify-end pr-8">
+                                                            <div className="h-1.5 w-16 bg-slate-100 rounded-full overflow-hidden">
+                                                                <div 
+                                                                    className="h-full bg-indigo-400 rounded-full" 
+                                                                    style={{ width: `${30 + Math.random() * 60}%` }} 
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+              </CardContent>
+            </Card>
+
+          {/* Raw data / Single group view if filtered */}
+          {slcGroupFilter !== "all" && (
+            <Card className="border-violet-200 bg-violet-50/20 shadow-sm border-dashed">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 rounded-full bg-violet-100">
+                      <FileText className="h-6 w-6 text-violet-600" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-slate-900">Dettaglio Gruppo: {slcAssessments.find(a => a.id === slcGroupFilter)?.setup.nomeGruppoOmogeneo}</h3>
+                      <p className="text-sm text-slate-500">Puoi visualizzare il report completo e le azioni correttive per questo specifico gruppo.</p>
+                    </div>
+                  </div>
+                  <Button 
+                    className="bg-violet-600 hover:bg-violet-700"
+                    onClick={() => router.push(`/dashboard_azienda/slc/${slcGroupFilter}/fase-1`)}
+                  >
+                    Vedi Analisi Completa
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Assessment groups list (moved to bottom) */}
+          <Card className={cn("border-slate-200 shadow-sm break-inside-avoid", !reportConfig.slcGroups && "hidden no-pdf")}>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0">
+              <div>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Brain className="h-4 w-4 text-violet-600" />
+                  Elenco Gruppi Omogenei
+                </CardTitle>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 gap-2 text-violet-600 border-violet-200 hover:bg-violet-50 text-xs"
+                onClick={() => router.push("/dashboard_azienda/slc")}
+              >
+                Gestisci tutti <ChevronRight className="h-3 w-3" />
+              </Button>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="divide-y divide-slate-100">
+                {slcAssessments.map((a) => {
+                  const rischioColor =
+                    a.scores.rischioFase1 === "alto"
+                      ? "bg-red-100 text-red-800"
+                      : a.scores.rischioFase1 === "medio"
+                      ? "bg-yellow-100 text-yellow-800"
+                      : "bg-green-100 text-green-800"
+                  const rischioLabel =
+                    a.scores.rischioFase1.charAt(0).toUpperCase() + a.scores.rischioFase1.slice(1)
+                  return (
+                    <div
+                      key={a.id}
+                      className="flex items-center justify-between gap-4 p-3 hover:bg-slate-50 cursor-pointer transition-colors"
+                      onClick={() => router.push(`/dashboard_azienda/slc/${a.id}/fase-1`)}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-sm text-slate-900 truncate">
+                          {a.setup.nomeGruppoOmogeneo || "Gruppo senza nome"}
+                        </p>
+                        <p className="text-[10px] text-slate-400">
+                          {a.setup.numeroLavoratori != null ? `${a.setup.numeroLavoratori} lavoratori · ` : ""}
+                          {a.setup.dataValutazione || "—"}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-3 shrink-0">
+                        <Badge className={`${rischioColor} text-[10px] border-none font-medium h-5`}>{rischioLabel}</Badge>
+                        <ChevronRight className="h-4 w-4 text-slate-400" />
+                      </div>
+                    </div>
+                  )
+                })}
+                </div>
+              </CardContent>
+            </Card>
+          </>
+        })()}
+      </div>
+    )}
+
+      {/* ===== Coming-soon placeholder for other module types ===== */}
+      {!["wellbeing", "slc"].includes(selectedSurvey.type) && (
+        <Card className="border-slate-200 shadow-sm">
+          <CardContent className="flex flex-col items-center justify-center py-20 gap-4">
+            <div className="p-5 rounded-full bg-slate-100">
+              <Files className="h-10 w-10 text-slate-400" />
+            </div>
+            <div className="text-center space-y-1">
+              <h3 className="text-lg font-semibold text-slate-900">Visualizzazione in arrivo</h3>
+              <p className="text-sm text-slate-500 max-w-sm">
+                L&apos;analisi dettagliata per il modulo{" "}
+                <span className="font-medium text-slate-700">{selectedSurvey.title}</span> sarà disponibile
+                prossimamente.
+              </p>
+            </div>
+            <Badge variant="outline" className="text-slate-500 border-slate-200 bg-slate-50 uppercase tracking-wider text-[10px] font-bold">
+              {selectedSurvey.type}
+            </Badge>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ===== Wellbeing-specific content ===== */}
+      {selectedSurvey.type === "wellbeing" && <>
       {/* Main Analysis Section */}
        <div id="wellbeing-section-kpi" className={cn("grid gap-4 md:grid-cols-2 lg:grid-cols-5 grid-pdf-3", !reportConfig.kpis && "hidden no-pdf")}>
           {kpiData.map((kpi) => (
@@ -966,8 +1914,13 @@ export default function AnalyticsPage() {
                 </Button>
             </div>
         </div>
+
+      </>}
       </div>
 
+      {/* Hidden container to accumulate all PDF pages */}
+      <div id="pdf-collection-container" className="hidden no-pdf" />
+      
       {/* Report Customizer Dialog */}
       <Dialog open={isReportDialogOpen} onOpenChange={setIsReportDialogOpen}>
         <DialogContent className="max-w-5xl h-[90vh] flex flex-col p-0 overflow-hidden bg-slate-50">
@@ -992,26 +1945,101 @@ export default function AnalyticsPage() {
            
            <div className="flex-1 flex overflow-hidden">
               {/* Sidebar Configurator */}
-              <div className="w-80 border-r bg-white p-6 space-y-8 overflow-y-auto shrink-0">
-                <div className="space-y-4">
+              <div className="w-80 border-r bg-white p-5 space-y-5 overflow-y-auto shrink-0">
+                {/* SLC-specific: Group Selection */}
+                {selectedSurvey.type === "slc" && (
+                  <div className="space-y-3">
+                    <h4 className="text-[11px] font-black text-slate-900 uppercase tracking-widest flex items-center gap-2">
+                      <Users className="h-3.5 w-3.5 text-violet-500" />
+                      Gruppi Omogenei
+                    </h4>
+                    <p className="text-[10px] text-slate-400">Seleziona i gruppi da includere nel report</p>
+                    <div className="space-y-1.5">
+                      <div className="flex items-center gap-2 p-2 rounded-lg hover:bg-slate-50 transition-colors">
+                        <Checkbox id="pdf-group-all" checked={pdfFilterConfig.selectedGroups.includes("all")}
+                          onCheckedChange={(checked) => setPdfFilterConfig(prev => ({ ...prev, selectedGroups: checked ? [...prev.selectedGroups.filter(g => g !== "all"), "all"] : prev.selectedGroups.filter(g => g !== "all") }))} />
+                        <UILabel htmlFor="pdf-group-all" className="text-xs font-semibold text-slate-700 cursor-pointer">Tutti i gruppi omogenei</UILabel>
+                      </div>
+                      {slcAssessments.map(a => (
+                        <div key={a.id} className="flex items-center gap-2 p-2 rounded-lg hover:bg-slate-50 transition-colors">
+                          <Checkbox id={`pdf-group-${a.id}`} checked={pdfFilterConfig.selectedGroups.includes(a.id)}
+                            onCheckedChange={(checked) => setPdfFilterConfig(prev => ({ ...prev, selectedGroups: checked ? [...prev.selectedGroups, a.id] : prev.selectedGroups.filter(g => g !== a.id) }))} />
+                          <UILabel htmlFor={`pdf-group-${a.id}`} className="text-xs font-medium text-slate-600 cursor-pointer">{a.setup.nomeGruppoOmogeneo}</UILabel>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* SLC-specific: Dettaglio Dimensioni Selection */}
+                {selectedSurvey.type === "slc" && (
+                  <div className="space-y-3 pt-4 border-t">
+                    <h4 className="text-[11px] font-black text-slate-900 uppercase tracking-widest flex items-center gap-2">
+                       <Activity className="h-3.5 w-3.5 text-blue-500" />
+                       Dimensioni in Dettaglio
+                    </h4>
+                    <p className="text-[10px] text-slate-400">Dimensione stampate nel dettaglio domande</p>
+                    <div className="space-y-1.5">
+                      {["Domanda", "Controllo", "Supporto Management", "Supporto Colleghi", "Relazioni", "Ruolo", "Cambiamento"].map((label) => (
+                        <div key={label} className="flex items-center gap-2 p-2 rounded-lg hover:bg-slate-50 transition-colors">
+                          <Checkbox id={`pdf-dim-${label}`} checked={pdfFilterConfig.selectedDimensions.includes(label)}
+                            onCheckedChange={(checked) => setPdfFilterConfig(prev => ({ ...prev, selectedDimensions: checked ? [...prev.selectedDimensions, label] : prev.selectedDimensions.filter(d => d !== label) }))} />
+                          <UILabel htmlFor={`pdf-dim-${label}`} className="text-xs font-medium text-slate-600 cursor-pointer">{label}</UILabel>
+                        </div>
+                      ))}
+                      <div className="flex gap-2 pt-1">
+                        <Button variant="ghost" size="sm" className="text-[10px] h-6 px-2 text-blue-600 hover:text-blue-700"
+                          onClick={() => setPdfFilterConfig(prev => ({ ...prev, selectedDimensions: ["Domanda", "Controllo", "Supporto Management", "Supporto Colleghi", "Relazioni", "Ruolo", "Cambiamento"] }))}>Tutte</Button>
+                        <Button variant="ghost" size="sm" className="text-[10px] h-6 px-2 text-slate-400 hover:text-slate-600"
+                          onClick={() => setPdfFilterConfig(prev => ({ ...prev, selectedDimensions: [] }))}>Nessuna</Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Summary badge */}
+                {selectedSurvey.type === "slc" && pdfFilterConfig.selectedGroups.length > 0 && (
+                  <div className="bg-violet-50 border border-violet-200 rounded-xl p-3 space-y-1">
+                    <p className="text-[10px] font-black text-violet-700 uppercase tracking-widest">Riepilogo Stampa</p>
+                    <p className="text-xs text-violet-600">
+                      Verrà generato 1 file PDF contenente l'analisi di <span className="font-bold">{pdfFilterConfig.selectedGroups.length}</span>{" "}
+                      grupp{pdfFilterConfig.selectedGroups.length === 1 ? "o" : "i"}.
+                    </p>
+                  </div>
+                )}
+
+                <div className="space-y-4 pt-4 border-t">
                   <h4 className="text-sm font-semibold text-slate-900 uppercase tracking-wider">Sezioni Report</h4>
                   <div className="space-y-4">
-                    {Object.entries({
-                      kpis: "KPI Principali",
-                      radar: "Wellbeing Radar",
-                      insights: "AI Insights",
-                      demographics: "Analisi Demografica",
-                      history: "Storico Compilazioni"
-                    }).map(([key, label]) => (
-                      <div key={key} className="flex items-center justify-between">
-                        <UILabel htmlFor={`section-${key}`} className="text-sm font-medium text-slate-700">{label}</UILabel>
-                        <Switch 
-                          id={`section-${key}`} 
-                          checked={reportConfig[key as keyof (typeof reportConfig)] as boolean} 
-                          onCheckedChange={() => handleToggleSection(key as keyof typeof reportConfig)}
-                        />
-                      </div>
-                    ))}
+                    {(() => {
+                      const sections = selectedSurvey.type === "slc" 
+                        ? {
+                            kpis: "Indice Stress (ISLC)",
+                            radar: "Valutazione Aree",
+                            slcQuestions: "Dettaglio Domande",
+                            demographics: "Analisi Anagrafica",
+                            slcIntegrative: "Analisi Remoto & Tech",
+                            slcGroups: "Elenco Gruppi"
+                          }
+                        : {
+                            kpis: "KPI Principali",
+                            radar: "Wellbeing Radar",
+                            insights: "AI Insights",
+                            demographics: "Analisi Demografica",
+                            history: "Storico Compilazioni"
+                          };
+
+                      return Object.entries(sections).map(([key, label]) => (
+                        <div key={key} className="flex items-center justify-between">
+                          <UILabel htmlFor={`section-${key}`} className="text-sm font-medium text-slate-700">{label}</UILabel>
+                          <Switch 
+                            id={`section-${key}`} 
+                            checked={reportConfig[key as keyof (typeof reportConfig)] as boolean} 
+                            onCheckedChange={() => handleToggleSection(key as keyof typeof reportConfig)}
+                          />
+                        </div>
+                      ));
+                    })()}
                   </div>
 
                   <div className="pt-6 border-t space-y-4">

@@ -116,7 +116,9 @@ export default function SlcFase1Page() {
     return recalcAllScores(
       assessment.eventiSentinella,
       assessment.checklistContenuto,
+      CHECKLIST_CONTENUTO,
       assessment.checklistContesto,
+      CHECKLIST_CONTESTO,
       assessment.moduloRemoto
     )
   }, [assessment.eventiSentinella, assessment.checklistContenuto, assessment.checklistContesto, assessment.moduloRemoto])
@@ -375,8 +377,52 @@ export default function SlcFase1Page() {
           <div className="flex items-center gap-3">
             <span className="text-lg font-bold">{totale}</span>
             <span className="text-sm text-slate-500">/ {maxScore}</span>
+            {area === "contenuto" && (
+              <Badge className={RISK_CONFIG[scores.rischioContenuto].bg}>
+                {RISK_CONFIG[scores.rischioContenuto].label}
+              </Badge>
+            )}
+            {area === "contesto" && (
+              <Badge className={RISK_CONFIG[scores.rischioContesto].bg}>
+                {RISK_CONFIG[scores.rischioContesto].label}
+              </Badge>
+            )}
           </div>
         </div>
+        {area === "contenuto" && scores.dimensioniContenuto.length > 0 && (
+          <div className="mt-3 p-3 bg-purple-50 rounded-lg border border-purple-100">
+            <p className="text-xs font-semibold text-purple-700 mb-2">Punteggi per Dimensione — INAIL Tabella 5</p>
+            <div className="space-y-2">
+              {scores.dimensioniContenuto.map(dim => (
+                <div key={dim.nome} className="flex items-center gap-2 text-xs">
+                  <span className="text-slate-600 flex-1">{dim.nome}</span>
+                  <span className="font-bold w-6 text-right">{dim.score}</span>
+                  <span className="text-slate-400">/100</span>
+                  <Badge className={cn(RISK_CONFIG[dim.rischio].bg, "text-[10px] px-1.5 py-0")}>
+                    {RISK_CONFIG[dim.rischio].label}
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        {area === "contesto" && scores.dimensioniContesto.length > 0 && (
+          <div className="mt-3 p-3 bg-teal-50 rounded-lg border border-teal-100">
+            <p className="text-xs font-semibold text-teal-700 mb-2">Punteggi per Dimensione — INAIL Tabella 8</p>
+            <div className="space-y-2">
+              {scores.dimensioniContesto.map(dim => (
+                <div key={dim.nome} className="flex items-center gap-2 text-xs">
+                  <span className="text-slate-600 flex-1">{dim.nome}</span>
+                  <span className="font-bold w-6 text-right">{dim.score}</span>
+                  <span className="text-slate-400">/100</span>
+                  <Badge className={cn(RISK_CONFIG[dim.rischio].bg, "text-[10px] px-1.5 py-0")}>
+                    {RISK_CONFIG[dim.rischio].label}
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     )
   }
@@ -717,7 +763,7 @@ export default function SlcFase1Page() {
               <span className="font-semibold text-sm">Totale Eventi Sentinella</span>
               <div className="flex items-center gap-3">
                 <span className="text-lg font-bold">{scores.totaleEventiSentinella}</span>
-                <span className="text-sm text-slate-500">/ 400</span>
+                <span className="text-sm text-slate-500">/ 40</span>
                 <Badge className={RISK_CONFIG[scores.rischioEventiSentinella].bg}>
                   {RISK_CONFIG[scores.rischioEventiSentinella].label}
                 </Badge>
@@ -741,7 +787,7 @@ export default function SlcFase1Page() {
             </div>
           </AccordionTrigger>
           <AccordionContent className="px-4 pb-4">
-            {renderChecklistSection("contenuto", CHECKLIST_CONTENUTO, assessment.checklistContenuto, scores.totaleContenuto, CHECKLIST_CONTENUTO.length)}
+            {renderChecklistSection("contenuto", CHECKLIST_CONTENUTO, assessment.checklistContenuto, scores.totaleContenuto, 100)}
           </AccordionContent>
         </AccordionItem>
 
@@ -760,7 +806,7 @@ export default function SlcFase1Page() {
             </div>
           </AccordionTrigger>
           <AccordionContent className="px-4 pb-4">
-            {renderChecklistSection("contesto", CHECKLIST_CONTESTO, assessment.checklistContesto, scores.totaleContesto, CHECKLIST_CONTESTO.length)}
+            {renderChecklistSection("contesto", CHECKLIST_CONTESTO, assessment.checklistContesto, scores.totaleContesto, 100)}
           </AccordionContent>
         </AccordionItem>
 
@@ -873,12 +919,13 @@ export default function SlcFase1Page() {
                   <CardTitle className="text-sm text-slate-600">Eventi Sentinella</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{scores.totaleEventiSentinella}<span className="text-sm font-normal text-slate-400"> / 400</span></div>
-                  <Progress value={(scores.totaleEventiSentinella / 400) * 100} className="mt-2 h-2" />
-                  <div className="mt-2">
+                  <div className="text-2xl font-bold">{scores.totaleEventiSentinella}<span className="text-sm font-normal text-slate-400"> / 40</span></div>
+                  <Progress value={(scores.totaleEventiSentinella / 40) * 100} className="mt-2 h-2" />
+                  <div className="mt-2 flex items-center gap-2 flex-wrap">
                     <Badge className={RISK_CONFIG[scores.rischioEventiSentinella].bg}>
                       {RISK_CONFIG[scores.rischioEventiSentinella].label}
                     </Badge>
+                    <span className="text-xs text-slate-400">→ Fase 1: <strong>{scores.valoreSentinellaFase1}</strong></span>
                   </div>
                 </CardContent>
               </Card>
@@ -889,8 +936,28 @@ export default function SlcFase1Page() {
                   <CardTitle className="text-sm text-slate-600">Contenuto del Lavoro</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{scores.totaleContenuto}<span className="text-sm font-normal text-slate-400"> / {CHECKLIST_CONTENUTO.length}</span></div>
-                  <Progress value={(scores.totaleContenuto / CHECKLIST_CONTENUTO.length) * 100} className="mt-2 h-2" />
+                  <div className="text-2xl font-bold">{scores.totaleContenuto}<span className="text-sm font-normal text-slate-400"> / 100</span></div>
+                  <Progress value={scores.totaleContenuto} className="mt-2 h-2" />
+                  <div className="mt-2">
+                    <Badge className={RISK_CONFIG[scores.rischioContenuto].bg}>
+                      {RISK_CONFIG[scores.rischioContenuto].label}
+                    </Badge>
+                  </div>
+                  {scores.dimensioniContenuto.length > 0 && (
+                    <div className="mt-3 space-y-1">
+                      {scores.dimensioniContenuto.map(dim => (
+                        <div key={dim.nome} className="flex items-center gap-1.5 text-[10px]">
+                          <div className={cn(
+                            "w-1.5 h-1.5 rounded-full shrink-0",
+                            dim.rischio === "basso" ? "bg-green-500" :
+                            dim.rischio === "medio" ? "bg-yellow-500" : "bg-red-500"
+                          )} />
+                          <span className="text-slate-500 truncate flex-1">{dim.nome.split(" ").slice(0, 2).join(" ")}</span>
+                          <span className="font-bold text-slate-700">{dim.score}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
 
@@ -900,8 +967,28 @@ export default function SlcFase1Page() {
                   <CardTitle className="text-sm text-slate-600">Contesto del Lavoro</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{scores.totaleContesto}<span className="text-sm font-normal text-slate-400"> / {CHECKLIST_CONTESTO.length}</span></div>
-                  <Progress value={(scores.totaleContesto / CHECKLIST_CONTESTO.length) * 100} className="mt-2 h-2" />
+                  <div className="text-2xl font-bold">{scores.totaleContesto}<span className="text-sm font-normal text-slate-400"> / 100</span></div>
+                  <Progress value={Math.min(scores.totaleContesto, 100)} className="mt-2 h-2" />
+                  <div className="mt-2">
+                    <Badge className={RISK_CONFIG[scores.rischioContesto].bg}>
+                      {RISK_CONFIG[scores.rischioContesto].label}
+                    </Badge>
+                  </div>
+                  {scores.dimensioniContesto.length > 0 && (
+                    <div className="mt-3 space-y-1">
+                      {scores.dimensioniContesto.map(dim => (
+                        <div key={dim.nome} className="flex items-center gap-1.5 text-[10px]">
+                          <div className={cn(
+                            "w-1.5 h-1.5 rounded-full shrink-0",
+                            dim.rischio === "basso" ? "bg-green-500" :
+                            dim.rischio === "medio" ? "bg-yellow-500" : "bg-red-500"
+                          )} />
+                          <span className="text-slate-500 truncate flex-1">{dim.nome.split(" ").slice(0, 2).join(" ")}</span>
+                          <span className="font-bold text-slate-700">{dim.score}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
 
@@ -911,8 +998,8 @@ export default function SlcFase1Page() {
                   <CardTitle className="text-sm font-bold text-slate-900">TOTALE FASE 1</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-3xl font-black">{scores.totaleFase1}<span className="text-sm font-normal text-slate-400"> / {400 + CHECKLIST_CONTENUTO.length + CHECKLIST_CONTESTO.length}</span></div>
-                  <Progress value={(scores.totaleFase1 / (400 + CHECKLIST_CONTENUTO.length + CHECKLIST_CONTESTO.length)) * 100} className="mt-2 h-2" />
+                  <div className="text-3xl font-black">{scores.totaleFase1}<span className="text-sm font-normal text-slate-400"> / 220</span></div>
+                  <Progress value={(scores.totaleFase1 / 220) * 100} className="mt-2 h-2" />
                   <div className="mt-2">
                     <Badge className={cn(RISK_CONFIG[scores.rischioFase1].bg, "text-sm px-3 py-1")}>
                       {RISK_CONFIG[scores.rischioFase1].label}
@@ -976,7 +1063,10 @@ export default function SlcFase1Page() {
                   <Button variant="outline" onClick={createNewVersion} className="gap-2">
                     <Copy className="h-4 w-4" /> Crea Nuova Versione
                   </Button>
-                  <Button className="gap-2" disabled>
+                  <Button
+                    className="gap-2 bg-violet-600 hover:bg-violet-700"
+                    onClick={() => router.push(`/dashboard_azienda/slc/${assessmentId}/fase-2`)}
+                  >
                     Procedi a Fase 2
                   </Button>
                 </>

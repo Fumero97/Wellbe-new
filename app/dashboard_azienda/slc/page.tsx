@@ -122,8 +122,8 @@ export default function SlcIndexPage() {
             <Brain className="h-7 w-7 text-violet-600" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">Stress Lavoro Correlato</h1>
-            <p className="text-sm text-slate-500">Valutazione preliminare per gruppi omogenei — metodologia INAIL 2025</p>
+            <h1 className="text-2xl font-bold text-slate-900">Fase Propedeutica e Valutazione Preliminare</h1>
+            <p className="text-sm text-slate-500">Valutazione Stress Lavoro Correlato per gruppi omogenei — metodologia INAIL 2025</p>
           </div>
         </div>
         <Button className="gap-2 bg-violet-600 hover:bg-violet-700" onClick={() => setDialogOpen(true)}>
@@ -205,6 +205,7 @@ export default function SlcIndexPage() {
                     <TableHead className="w-[120px]">Stato</TableHead>
                     <TableHead className="w-[110px] text-center">Rischio Fase 1</TableHead>
                     <TableHead className="w-[80px] text-center">Totale</TableHead>
+                    <TableHead className="w-[110px] text-center">Fase 2</TableHead>
                     <TableHead className="w-[120px] text-right">Azioni</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -243,6 +244,23 @@ export default function SlcIndexPage() {
                           </Badge>
                         </TableCell>
                         <TableCell className="text-center font-bold">{a.scores.totaleFase1}</TableCell>
+                        <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
+                          {a.fase2.status === "non_attivata" ? (
+                            <span className="text-xs text-slate-400">—</span>
+                          ) : (
+                            <Badge
+                              className={cn(
+                                "cursor-pointer text-xs border-none",
+                                a.fase2.status === "completata"
+                                  ? "bg-green-100 text-green-800 hover:bg-green-200"
+                                  : "bg-amber-100 text-amber-800 hover:bg-amber-200"
+                              )}
+                              onClick={() => router.push(`/dashboard_azienda/slc/${a.id}/fase-2`)}
+                            >
+                              {a.fase2.status === "completata" ? "Completata" : "Attiva"}
+                            </Badge>
+                          )}
+                        </TableCell>
                         <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                           <div className="flex items-center justify-end gap-1">
                             <Button

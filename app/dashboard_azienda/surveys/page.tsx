@@ -86,6 +86,18 @@ const INITIAL_SURVEYS = [
     target: 50,
     rate: 0,
     color: "bg-yellow-100 text-yellow-700"
+  },
+  {
+    id: "6",
+    title: "Stress Lavoro Correlato",
+    status: "Active",
+    module: "SLC",
+    created: "Jan 15, 2025",
+    closes: "Mar 15, 2025",
+    responses: 0,
+    target: 0,
+    rate: 0,
+    color: "bg-violet-100 text-violet-700"
   }
 ]
 
@@ -170,6 +182,7 @@ export default function SurveysPage() {
                     <SelectItem value="Safety">Safety</SelectItem>
                     <SelectItem value="Supply Chain">Supply Chain</SelectItem>
                     <SelectItem value="Stakeholders">Stakeholders</SelectItem>
+                    <SelectItem value="SLC">SLC</SelectItem>
                   </SelectContent>
                 </Select>
 

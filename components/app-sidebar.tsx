@@ -57,7 +57,7 @@ export function AppSidebar() {
       icon: Shield,
     },
     {
-      title: "SLC",
+      title: "Fase Propedeutica e Valutazione Preliminare",
       url: "/dashboard_azienda/slc",
       icon: Brain,
     },
@@ -134,9 +134,9 @@ export function AppSidebar() {
               {modules.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
-                    <a href={item.url} className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-50 transition-colors text-slate-600 font-medium">
-                      <item.icon className="h-5 w-5" />
-                      <span>{item.title}</span>
+                    <a href={item.url} className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-50 transition-colors text-slate-600 font-medium overflow-hidden">
+                      <item.icon className="h-5 w-5 shrink-0" />
+                      <span className="truncate">{item.title}</span>
                     </a>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -156,9 +156,9 @@ export function AppSidebar() {
               {tools.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
-                    <a href={item.url} className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-50 transition-colors text-slate-600 font-medium">
-                      <item.icon className="h-5 w-5" />
-                      <span>{item.title}</span>
+                    <a href={item.url} className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-50 transition-colors text-slate-600 font-medium overflow-hidden">
+                      <item.icon className="h-5 w-5 shrink-0" />
+                      <span className="truncate">{item.title}</span>
                     </a>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

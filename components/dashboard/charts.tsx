@@ -54,17 +54,21 @@ export function RadarChartDemo({ data }: { data: ChartData[] }) {
 
 export function ChartRadarLinesOnly({ 
   data, 
-  config 
+  config,
+  showScoreInLabels = false,
+  domain = [0, 6]
 }: { 
   data: any[], 
-  config: ChartConfig 
+  config: ChartConfig,
+  showScoreInLabels?: boolean,
+  domain?: [number, number]
 }) {
   return (
     <ChartContainer
       config={config}
       className="mx-auto aspect-square max-h-[400px] w-full"
     >
-      <RadarChart data={data} margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
+      <RadarChart data={data} margin={{ top: 20, right: 30, bottom: 20, left: 30 }}>
         <ChartTooltip
           cursor={false}
           content={<ChartTooltipContent hideLabel />}
@@ -72,9 +76,12 @@ export function ChartRadarLinesOnly({
         <PolarAngleAxis 
           dataKey="area" 
           tick={(props) => {
-            const { payload, x, y, textAnchor } = props;
+            const { payload, x, y, textAnchor, index } = props;
             const fullText = payload.value;
-            const shortText = fullText.length > 15 ? fullText.substring(0, 12) + "..." : fullText;
+            const score = data[index]?.score;
+            
+            // If text is too long, wrap or truncate but keep it readable
+            const shortText = fullText.length > 20 ? fullText.substring(0, 18) + "..." : fullText;
             
             return (
               <g transform={`translate(${x},${y})`}>
@@ -83,22 +90,40 @@ export function ChartRadarLinesOnly({
                   y={0}
                   dy={4}
                   textAnchor={textAnchor}
-                  className="fill-slate-500 text-[10px] font-medium cursor-help"
+                  className="fill-slate-500 text-[10px] font-bold cursor-help"
                 >
-                  <tspan>{shortText}</tspan>
+                  <tspan x={0} dy="0">{shortText}</tspan>
+                  {showScoreInLabels && score !== undefined && (
+                    <tspan x={0} dy="12" className="fill-indigo-600 font-black text-[11px]">
+                      {score}
+                    </tspan>
+                  )}
                   <title>{fullText}</title>
                 </text>
               </g>
             );
           }}
         />
-        <PolarGrid radialLines={false} />
-        <PolarRadiusAxis domain={[0, 6]} axisLine={false} tick={false} />
+        <PolarGrid gridType="polygon" className="stroke-slate-200/50" />
+        <PolarRadiusAxis 
+          domain={domain} 
+          axisLine={false} 
+          tick={false} 
+          angle={90}
+          stroke="#e2e8f0"
+        />
         <Radar
           dataKey="score"
           stroke="var(--color-score)"
-          fill="none"
-          strokeWidth={2}
+          fill="var(--color-score)"
+          fillOpacity={0.1}
+          strokeWidth={3}
+          dot={{
+            r: 4,
+            fill: "white",
+            stroke: "var(--color-score)",
+            strokeWidth: 2
+          }}
         />
       </RadarChart>
     </ChartContainer>

@@ -70,14 +70,64 @@ export interface SlcRemoteItem {
   note: string
 }
 
+export interface SlcDimensionScore {
+  nome: string
+  score: number        // 0–100 normalizzato
+  rischio: SlcRiskLevel
+}
+
 export interface SlcScores {
-  totaleEventiSentinella: number
+  totaleEventiSentinella: number   // somma grezza 0–40
   rischioEventiSentinella: SlcRiskLevel
-  totaleContenuto: number
+  valoreSentinellaFase1: number    // valore discretizzato INAIL: 0 | 6 | 16
+  totaleContenuto: number          // media dei punteggi delle dimensioni (0–100)
+  rischioContenuto: SlcRiskLevel
+  dimensioniContenuto: SlcDimensionScore[]
   totaleContesto: number
+  rischioContesto: SlcRiskLevel
+  dimensioniContesto: SlcDimensionScore[]
   totaleFase1: number
   rischioFase1: SlcRiskLevel
   totaleModuloRemoto: number
+}
+
+// ===== FASE 2 — VALUTAZIONE APPROFONDITA =====
+
+export type SlcFase2Status = "non_attivata" | "attiva" | "completata"
+
+export interface SlcPerceptionAnswer {
+  questionId: string        // "1"–"35" (id item INAIL-HSE)
+  valore: 1 | 2 | 3 | 4 | 5
+}
+
+export interface SlcFase2DimensionScore {
+  nome: string
+  score: number             // 0–100 (100 = max rischio)
+  rischio: SlcRiskLevel
+}
+
+export interface SlcDemographicCount {
+  option: string
+  count: number
+}
+
+export interface SlcDemographicDistribution {
+  fieldId: string                 // "gender", "age_range", …
+  label: string                   // "Genere", "Età", …
+  counts: SlcDemographicCount[]   // distribuzione delle risposte
+}
+
+export interface SlcFase2Data {
+  status: SlcFase2Status
+  dataAttivazione: string | null
+  dataChiusura: string | null
+  numPartecipanti: number
+  numTarget: number
+  risposte: SlcPerceptionAnswer[]         // punteggi aggregati per item
+  dimensioni: SlcFase2DimensionScore[]
+  totale: number                          // punteggio grezzo 35–175 (175 = ottimo benessere)
+  rischio: SlcRiskLevel
+  demografici?: SlcDemographicDistribution[]  // distribuzione socio-demografica (non contribuisce al punteggio)
 }
 
 export interface SlcAuditLog {
@@ -112,4 +162,5 @@ export interface SlcAssessment {
   noteFinali: string
   azioniCorrettive: string
   auditLog: SlcAuditLog[]
+  fase2: SlcFase2Data
 }

@@ -165,147 +165,147 @@ export const CHECKLIST_CONTENUTO: SlcChecklistItemDef[] = [
 // =============================
 
 export const CHECKLIST_CONTESTO: SlcChecklistItemDef[] = [
-  // --- Cultura organizzativa ---
+  // --- Funzione e cultura organizzativa ---
   {
     id: "CX01", codice: "CX01",
-    dimensione: "Cultura organizzativa",
+    dimensione: "Funzione e cultura organizzativa",
     testo: "Esiste una politica aziendale per la gestione dello stress lavoro-correlato",
     area: "contesto",
   },
   {
     id: "CX02", codice: "CX02",
-    dimensione: "Cultura organizzativa",
+    dimensione: "Funzione e cultura organizzativa",
     testo: "Sono definite procedure per la gestione dei conflitti sul lavoro",
     area: "contesto",
   },
   {
     id: "CX03", codice: "CX03",
-    dimensione: "Cultura organizzativa",
+    dimensione: "Funzione e cultura organizzativa",
     testo: "Il management promuove attivamente il benessere dei lavoratori",
     area: "contesto",
   },
   {
     id: "CX04", codice: "CX04",
-    dimensione: "Cultura organizzativa",
+    dimensione: "Funzione e cultura organizzativa",
     testo: "I lavoratori vengono consultati sui cambiamenti organizzativi che li riguardano",
     area: "contesto",
   },
   {
     id: "CX05", codice: "CX05",
-    dimensione: "Cultura organizzativa",
+    dimensione: "Funzione e cultura organizzativa",
     testo: "È presente un sistema di segnalazione anonima delle criticità",
     area: "contesto",
   },
-  // --- Ruolo nell'organizzazione ---
+  // --- Ruolo nell'ambito dell'organizzazione ---
   {
     id: "CX06", codice: "CX06",
-    dimensione: "Ruolo nell'organizzazione",
+    dimensione: "Ruolo nell'ambito dell'organizzazione",
     testo: "I ruoli e le responsabilità sono chiaramente definiti per ogni lavoratore",
     area: "contesto",
   },
   {
     id: "CX07", codice: "CX07",
-    dimensione: "Ruolo nell'organizzazione",
+    dimensione: "Ruolo nell'ambito dell'organizzazione",
     testo: "Non esistono conflitti di ruolo o ambiguità sulle responsabilità",
     area: "contesto",
   },
   {
     id: "CX08", codice: "CX08",
-    dimensione: "Ruolo nell'organizzazione",
+    dimensione: "Ruolo nell'ambito dell'organizzazione",
     testo: "Le aspettative nei confronti dei lavoratori sono realistiche e comunicate",
     area: "contesto",
   },
   {
     id: "CX09", codice: "CX09",
-    dimensione: "Ruolo nell'organizzazione",
+    dimensione: "Ruolo nell'ambito dell'organizzazione",
     testo: "L'organigramma aziendale è aggiornato e accessibile",
     area: "contesto",
   },
-  // --- Comunicazione ---
+  // --- Rapporti interpersonali sul lavoro ---
   {
     id: "CX10", codice: "CX10",
-    dimensione: "Comunicazione",
+    dimensione: "Rapporti interpersonali sul lavoro",
     testo: "La comunicazione interna è efficace e tempestiva",
     area: "contesto",
   },
   {
     id: "CX11", codice: "CX11",
-    dimensione: "Comunicazione",
+    dimensione: "Rapporti interpersonali sul lavoro",
     testo: "Sono previsti incontri periodici tra management e lavoratori",
     area: "contesto",
   },
   {
     id: "CX12", codice: "CX12",
-    dimensione: "Comunicazione",
+    dimensione: "Rapporti interpersonali sul lavoro",
     testo: "I lavoratori ricevono feedback regolare sulle proprie prestazioni",
     area: "contesto",
   },
   {
     id: "CX13", codice: "CX13",
-    dimensione: "Comunicazione",
+    dimensione: "Rapporti interpersonali sul lavoro",
     testo: "I cambiamenti aziendali vengono comunicati con adeguato preavviso",
     area: "contesto",
   },
-  // --- Autonomia decisionale ---
+  // --- Autonomia decisionale controllo del lavoro ---
   {
     id: "CX14", codice: "CX14",
-    dimensione: "Autonomia decisionale",
+    dimensione: "Autonomia decisionale controllo del lavoro",
     testo: "I lavoratori hanno un adeguato livello di autonomia nello svolgimento dei compiti",
     area: "contesto",
   },
   {
     id: "CX15", codice: "CX15",
-    dimensione: "Autonomia decisionale",
+    dimensione: "Autonomia decisionale controllo del lavoro",
     testo: "È possibile prendere decisioni operative senza eccessiva supervisione",
     area: "contesto",
   },
   {
     id: "CX16", codice: "CX16",
-    dimensione: "Autonomia decisionale",
+    dimensione: "Autonomia decisionale controllo del lavoro",
     testo: "I lavoratori possono proporre miglioramenti dei processi lavorativi",
     area: "contesto",
   },
-  // --- Sviluppo di carriera ---
+  // --- Evoluzione della carriera ---
   {
     id: "CX17", codice: "CX17",
-    dimensione: "Sviluppo di carriera",
+    dimensione: "Evoluzione della carriera",
     testo: "Sono presenti percorsi di crescita professionale e formazione continua",
     area: "contesto",
   },
   {
     id: "CX18", codice: "CX18",
-    dimensione: "Sviluppo di carriera",
+    dimensione: "Evoluzione della carriera",
     testo: "I criteri di valutazione e promozione sono trasparenti",
     area: "contesto",
   },
   {
     id: "CX19", codice: "CX19",
-    dimensione: "Sviluppo di carriera",
+    dimensione: "Evoluzione della carriera",
     testo: "La sicurezza del posto di lavoro è percepita come adeguata",
     area: "contesto",
   },
   {
     id: "CX20", codice: "CX20",
-    dimensione: "Sviluppo di carriera",
+    dimensione: "Evoluzione della carriera",
     testo: "La retribuzione è percepita come adeguata rispetto al ruolo",
     area: "contesto",
   },
-  // --- Interfaccia casa-lavoro ---
+  // --- Interfaccia casa lavoro ---
   {
     id: "CX21", codice: "CX21",
-    dimensione: "Interfaccia casa-lavoro",
+    dimensione: "Interfaccia casa lavoro",
     testo: "L'azienda supporta la conciliazione tra vita lavorativa e familiare",
     area: "contesto",
   },
   {
     id: "CX22", codice: "CX22",
-    dimensione: "Interfaccia casa-lavoro",
+    dimensione: "Interfaccia casa lavoro",
     testo: "Sono disponibili flessibilità orarie o permessi per esigenze personali",
     area: "contesto",
   },
   {
     id: "CX23", codice: "CX23",
-    dimensione: "Interfaccia casa-lavoro",
+    dimensione: "Interfaccia casa lavoro",
     testo: "Non è richiesta reperibilità eccessiva fuori dall'orario di lavoro",
     area: "contesto",
   },
